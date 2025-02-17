@@ -1,0 +1,17 @@
+project: "netdevops-lab"
+
+routers:
+  - name: R1
+    template: c7200
+  - name: R2
+    template: c7200
+  - name: R3
+    template: c7200
+
+links:
+  - endpoints:
+      - R1
+      - R2
+  - endpoints:
+      - R2
+      - R3
