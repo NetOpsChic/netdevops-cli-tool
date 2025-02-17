@@ -1,14 +1,31 @@
 {
   "version": 4,
   "terraform_version": "1.10.5",
-  "serial": 67,
+  "serial": 55,
   "lineage": "6adf23a8-3514-7841-a5fc-320661d27ce4",
   "outputs": {},
   "resources": [
     {
       "mode": "data",
       "type": "gns3_template_id",
-      "name": "router_template",
+      "name": "R1",
+      "provider": "provider[\"registry.terraform.io/netopschic/gns3\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "c1062729-ea26-4b59-b16c-ca2f28000c79",
+            "name": "c7200",
+            "template_id": "c1062729-ea26-4b59-b16c-ca2f28000c79"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "gns3_template_id",
+      "name": "R2",
       "provider": "provider[\"registry.terraform.io/netopschic/gns3\"]",
       "instances": [
         {
@@ -24,6 +41,37 @@
     },
     {
       "mode": "managed",
+      "type": "gns3_link",
+      "name": "R1_to_R2",
+      "provider": "provider[\"registry.terraform.io/netopschic/gns3\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "792d1040-595b-4939-8f02-174f64dea44f",
+            "link_id": "792d1040-595b-4939-8f02-174f64dea44f",
+            "node_a_adapter": 0,
+            "node_a_id": "221a66df-7b8a-483d-ab5b-3c161552c11f",
+            "node_a_port": 0,
+            "node_b_adapter": 0,
+            "node_b_id": "a3ec20f6-2ea1-4306-9585-f6dd35fb6dbe",
+            "node_b_port": 0,
+            "project_id": "1b1818d7-12c5-46dd-a88c-93ca974a66cd"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.gns3_template_id.R1",
+            "data.gns3_template_id.R2",
+            "gns3_project.project1",
+            "gns3_template.R1",
+            "gns3_template.R2"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
       "type": "gns3_project",
       "name": "project1",
       "provider": "provider[\"registry.terraform.io/netopschic/gns3\"]",
@@ -31,9 +79,9 @@
         {
           "schema_version": 0,
           "attributes": {
-            "id": "e807fb4c-5c92-4d6c-9383-38ab1cdda717",
+            "id": "1b1818d7-12c5-46dd-a88c-93ca974a66cd",
             "name": "netdevops-lab",
-            "project_id": "e807fb4c-5c92-4d6c-9383-38ab1cdda717"
+            "project_id": "1b1818d7-12c5-46dd-a88c-93ca974a66cd"
           },
           "sensitive_attributes": [],
           "private": "bnVsbA=="
@@ -43,16 +91,42 @@
     {
       "mode": "managed",
       "type": "gns3_template",
-      "name": "router1",
+      "name": "R1",
       "provider": "provider[\"registry.terraform.io/netopschic/gns3\"]",
       "instances": [
         {
           "schema_version": 0,
           "attributes": {
             "compute_id": "local",
-            "id": "2fe76a38-d7ca-4ebb-a1bf-d29eccadd55e",
-            "name": "Router1",
-            "project_id": "e807fb4c-5c92-4d6c-9383-38ab1cdda717",
+            "id": "221a66df-7b8a-483d-ab5b-3c161552c11f",
+            "name": "R1",
+            "project_id": "1b1818d7-12c5-46dd-a88c-93ca974a66cd",
+            "template_id": "c1062729-ea26-4b59-b16c-ca2f28000c79",
+            "x": 0,
+            "y": 0
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.gns3_template_id.R1",
+            "gns3_project.project1"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "gns3_template",
+      "name": "R2",
+      "provider": "provider[\"registry.terraform.io/netopschic/gns3\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "compute_id": "local",
+            "id": "a3ec20f6-2ea1-4306-9585-f6dd35fb6dbe",
+            "name": "R2",
+            "project_id": "1b1818d7-12c5-46dd-a88c-93ca974a66cd",
             "template_id": "c1062729-ea26-4b59-b16c-ca2f28000c79",
             "x": 200,
             "y": 150
@@ -60,59 +134,7 @@
           "sensitive_attributes": [],
           "private": "bnVsbA==",
           "dependencies": [
-            "data.gns3_template_id.router_template",
-            "gns3_project.project1"
-          ]
-        }
-      ]
-    },
-    {
-      "mode": "managed",
-      "type": "gns3_template",
-      "name": "router2",
-      "provider": "provider[\"registry.terraform.io/netopschic/gns3\"]",
-      "instances": [
-        {
-          "schema_version": 0,
-          "attributes": {
-            "compute_id": "local",
-            "id": "cf50dec2-3897-4264-b209-389470ed708e",
-            "name": "Router2",
-            "project_id": "e807fb4c-5c92-4d6c-9383-38ab1cdda717",
-            "template_id": "c1062729-ea26-4b59-b16c-ca2f28000c79",
-            "x": 400,
-            "y": 0
-          },
-          "sensitive_attributes": [],
-          "private": "bnVsbA==",
-          "dependencies": [
-            "data.gns3_template_id.router_template",
-            "gns3_project.project1"
-          ]
-        }
-      ]
-    },
-    {
-      "mode": "managed",
-      "type": "gns3_template",
-      "name": "router3",
-      "provider": "provider[\"registry.terraform.io/netopschic/gns3\"]",
-      "instances": [
-        {
-          "schema_version": 0,
-          "attributes": {
-            "compute_id": "local",
-            "id": "a9bc375c-0359-49a5-9b3f-857a160e9dc5",
-            "name": "Router3",
-            "project_id": "e807fb4c-5c92-4d6c-9383-38ab1cdda717",
-            "template_id": "c1062729-ea26-4b59-b16c-ca2f28000c79",
-            "x": 600,
-            "y": 150
-          },
-          "sensitive_attributes": [],
-          "private": "bnVsbA==",
-          "dependencies": [
-            "data.gns3_template_id.router_template",
+            "data.gns3_template_id.R2",
             "gns3_project.project1"
           ]
         }

@@ -10,51 +10,50 @@ import (
 var routerCount int
 var templateName string
 
-var deployCmd = &cobra.Command{
-	Use:   "deploy",
+var gns3Deploy = &cobra.Command{
+	Use:   "gns3-deploy",
 	Short: "Deploy network using Terraform",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Generating Terraform configuration...")
 
-		// Ensure terraform directory exists before writing main.tf
+		// Ensure terraform directory exists
 		err := os.MkdirAll("terraform", os.ModePerm)
 		if err != nil {
 			fmt.Println("Error creating terraform directory:", err)
 			os.Exit(1)
 		}
 
-		// Terraform configuration template
+		// Terraform template with improved formatting
 		tfTemplate := `terraform {
-			required_providers {
-			  gns3 = {
-				source  = "netopschic/gns3"
-				version = "~> 1.0"
-			  }
-			}
-		  }
-		  
-		  provider "gns3" {
-			host = "http://localhost:3080"
-		  }
-		  
-		  # Create a GNS3 Project
-		  resource "gns3_project" "project1" {
-			name = "netdevops-lab"
-		  }
-		  
-		  # Fetch the template ID dynamically
-		  data "gns3_template_id" "router_template" {
-			name = "{{ $.Template }}"
-		  }
-		  
-		  {{ range $i := (seq 1 .RouterCount) }}
-		  # Create devices from the template
-		  resource "gns3_template" "router{{ $i }}" {
-			name       = "Router{{ $i }}"
-			project_id = gns3_project.project1.id
-			template_id = data.gns3_template_id.router_template.id
-		  }
-		  {{ end }}`
+  required_providers {
+    gns3 = {
+      source  = "netopschic/gns3"
+      version = "~> 1.0"
+    }
+  }
+}
+
+provider "gns3" {
+  host = "http://localhost:3080"
+}
+
+resource "gns3_project" "project1" {
+  name = "netdevops-lab"
+}
+
+data "gns3_template_id" "router_template" {
+  name = "{{ .Template }}"
+}
+
+{{ range $i := seq 1 .RouterCount }}
+resource "gns3_template" "router{{ $i }}" {
+  name       = "Router{{ $i }}"
+  project_id = gns3_project.project1.id
+  template_id = data.gns3_template_id.router_template.id
+  x          = {{ multiply $i 200 }}   # Auto-spacing routers horizontally
+  y          = {{ multiply (mod $i 2) 150 }}  # Stagger routers vertically
+}
+{{ end }}`
 
 		// Data for the template
 		data := struct {
@@ -80,8 +79,8 @@ var deployCmd = &cobra.Command{
 }
 
 func init() {
-	deployCmd.Flags().IntVarP(&routerCount, "routers", "r", 1, "Number of routers to deploy")
-	deployCmd.Flags().StringVarP(&templateName, "template", "t", "c7200", "GNS3 device template")
+	gns3Deploy.Flags().IntVarP(&routerCount, "routers", "r", 1, "Number of routers to deploy")
+	gns3Deploy.Flags().StringVarP(&templateName, "template", "t", "c7200", "GNS3 device template")
 
-	rootCmd.AddCommand(deployCmd)
+	rootCmd.AddCommand(gns3Deploy)
 }

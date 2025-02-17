@@ -29,6 +29,15 @@ func mod(a, b int) int {
 	return a % b
 }
 
+// Custom sequence generator function (fixes 'seq' function not found)
+func seq(start, end int) []int {
+	s := make([]int, end-start+1)
+	for i := range s {
+		s[i] = start + i
+	}
+	return s
+}
+
 // generateTerraformFile creates a Terraform file dynamically
 func generateTerraformFile(filename, templateContent string, data interface{}) error {
 	file, err := os.Create(filename)
@@ -37,10 +46,11 @@ func generateTerraformFile(filename, templateContent string, data interface{}) e
 	}
 	defer file.Close()
 
-	// Register custom math functions
+	// Register custom functions for template parsing
 	funcMap := template.FuncMap{
 		"multiply": multiply,
 		"mod":      mod,
+		"seq":      seq, // Add 'seq' function here
 	}
 
 	tmpl, err := template.New("terraform").Funcs(funcMap).Parse(templateContent)
