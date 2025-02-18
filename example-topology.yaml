@@ -1,17 +1,36 @@
 project: "netdevops-lab"
 
 routers:
-  - name: R1
-    template: c7200
-  - name: R2
-    template: c7200
-  - name: R3
-    template: c7200
+  - name: "R1"
+    template: "c7200"
+  - name: "R2"
+    template: "c7200"
+
+switches:
+  - name: "SW1"
+
+clouds:
+  - name: "Cloud1"
 
 links:
   - endpoints:
-      - R1
-      - R2
+      - name: "R1"
+        adapter: 0
+        port: 0
+      - name: "SW1"
+        adapter: 0
+        port: 1
   - endpoints:
-      - R2
-      - R3
+      - name: "R2"
+        adapter: 0
+        port: 0
+      - name: "SW1"
+        adapter: 0
+        port: 2
+  - endpoints:
+      - name: "SW1"
+        adapter: 0
+        port: 3
+      - name: "Cloud1"
+        adapter: 0
+        port: 0
