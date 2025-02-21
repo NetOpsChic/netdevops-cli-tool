@@ -1,6 +1,6 @@
 package cmd
 
-// Topology structure shared between CLI and YAML modes
+// Topology represents the complete network topology shared between CLI and YAML modes.
 type Topology struct {
 	Project  string   `yaml:"project"`
 	Routers  []Router `yaml:"routers"`
@@ -9,35 +9,34 @@ type Topology struct {
 	Links    []Link   `yaml:"links"`
 }
 
-// Router structure
+// Router defines a router device.
 type Router struct {
 	Name     string `yaml:"name"`
 	Template string `yaml:"template"`
 }
 
-// Switch structure
+// Switch defines a switch device.
 type Switch struct {
 	Name string `yaml:"name"`
 }
 
-// Cloud structure
+// Cloud defines a cloud device.
 type Cloud struct {
 	Name string `yaml:"name"`
 }
 
-// Endpoint structure for defining device interfaces
+// Endpoint defines a device interface, including adapter and port numbers.
 type Endpoint struct {
 	Name    string `yaml:"name"`
 	Adapter int    `yaml:"adapter"`
 	Port    int    `yaml:"port"`
 }
 
-// Link structure for connections between nodes
+// Link defines a connection between two endpoints.
 type Link struct {
 	Endpoints []Endpoint `yaml:"endpoints"`
 }
 
-// CLI-Specific Link Struct
-type CLILink struct {
-	Endpoints []Endpoint
-}
+// CLILink is an alias for Link, used in CLI mode.
+// This ensures that CLI code can use the same structure as YAML mode without duplication.
+type CLILink = Link

@@ -1,4 +1,4 @@
-project: "netdevops-lab"
+project: "netdevops-lab-1"
 
 routers:
   - name: "R1"
