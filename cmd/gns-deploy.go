@@ -15,7 +15,8 @@ var switchCount int
 var cloudCount int
 var templateName string
 var links []string
-var projectName string // User-supplied project name
+var projectName string
+var startNodes bool
 
 // CLI template for Terraform that expects integer counts (RouterCount, SwitchCount, CloudCount).
 const terraformTemplateCLI = `terraform {
@@ -110,6 +111,13 @@ resource "gns3_link" "{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1)
   node_b_port    = {{ (index .Endpoints 1).Port }}
 }
 {{ end }}
+
+# Start all nodes if --start flag is used
+{{ if .Start }}
+resource "gns3_start_all" "start_nodes" {
+  project_id = gns3_project.project1.id
+}
+{{ end }}
 `
 
 // gns3DeployCmd represents the CLI-based deployment command.
@@ -128,6 +136,7 @@ var gns3DeployCmd = &cobra.Command{
 		fmt.Printf("Routers: %d, Switches: %d, Clouds: %d\n", routerCount, switchCount, cloudCount)
 		fmt.Printf("Template: %s\n", templateName)
 		fmt.Printf("Links: %v\n", links)
+		fmt.Printf("Start Nodes: %v\n", startNodes)
 
 		// Ensure the terraform directory exists.
 		if err := os.MkdirAll("terraform", os.ModePerm); err != nil {
@@ -227,6 +236,7 @@ var gns3DeployCmd = &cobra.Command{
 			CloudCount  int
 			Template    string
 			Links       []CLILink
+			Start       bool
 		}{
 			Project:     projectName,
 			RouterCount: routerCount,
@@ -234,6 +244,7 @@ var gns3DeployCmd = &cobra.Command{
 			CloudCount:  cloudCount,
 			Template:    templateName,
 			Links:       parsedLinks,
+			Start:       startNodes,
 		}
 
 		// Generate the Terraform file with the CLI template (counts-based).
@@ -267,5 +278,7 @@ func init() {
 	gns3DeployCmd.Flags().StringVarP(&templateName, "template", "t", "", "GNS3 device template (required)")
 	gns3DeployCmd.Flags().StringSliceVarP(&links, "links", "l", []string{}, "Comma-separated list of links in the format 'NodeA-NodeB' or 'NodeA:adapter/port-NodeB:adapter/port'")
 	gns3DeployCmd.Flags().StringVarP(&projectName, "project", "p", "netdevops", "GNS3 project name")
+	gns3DeployCmd.Flags().BoolVarP(&startNodes, "start", "o", false, "Start all nodes after deployment") // Added start flag
+	rootCmd.AddCommand(gns3DeployCmd)
 	rootCmd.AddCommand(gns3DeployCmd)
 }

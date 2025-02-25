@@ -1,36 +1,17 @@
-project: "netdevops-lab-1"
+project: "netdevops-lab-3"
+start_nodes: false   # This will start all nodes after deployment
 
 routers:
   - name: "R1"
     template: "c7200"
-  - name: "R2"
-    template: "c7200"
-
-switches:
-  - name: "SW1"
-
-clouds:
-  - name: "Cloud1"
+  - name: "ZTP"
+    template: "ztp"
 
 links:
   - endpoints:
       - name: "R1"
         adapter: 0
         port: 0
-      - name: "SW1"
-        adapter: 0
-        port: 1
-  - endpoints:
-      - name: "R2"
-        adapter: 0
-        port: 0
-      - name: "SW1"
-        adapter: 0
-        port: 2
-  - endpoints:
-      - name: "SW1"
-        adapter: 0
-        port: 3
-      - name: "Cloud1"
+      - name: "ZTP"
         adapter: 0
         port: 0

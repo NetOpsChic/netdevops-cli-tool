@@ -2,11 +2,12 @@ package cmd
 
 // Topology represents the complete network topology shared between CLI and YAML modes.
 type Topology struct {
-	Project  string   `yaml:"project"`
-	Routers  []Router `yaml:"routers"`
-	Switches []Switch `yaml:"switches"`
-	Clouds   []Cloud  `yaml:"clouds"`
-	Links    []Link   `yaml:"links"`
+	Project    string   `yaml:"project"`
+	Routers    []Router `yaml:"routers"`
+	Switches   []Switch `yaml:"switches"`
+	Clouds     []Cloud  `yaml:"clouds"`
+	Links      []Link   `yaml:"links"`
+	StartNodes bool     `yaml:"start_nodes"`
 }
 
 // Router defines a router device.
