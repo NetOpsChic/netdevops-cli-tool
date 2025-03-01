@@ -5,3 +5,4 @@ terraform/.terraform
 terraform*
 terraform/
 txt
+ignore

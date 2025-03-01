@@ -4,156 +4,206 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
-	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
 
-// DeviceInfo holds details for inventory generation
-type DeviceInfo struct {
-	Name      string
-	IP        string
-	User      string
-	Password  string
-	NetworkOS string
-	SSHArgs   string
+// ZTPDevice represents the device data from the ZTP server
+type ZTPDevice struct {
+	Name string `json:"name"`
+	IP   string `json:"ip"`
 }
 
-// gns3InventoryCmd represents the inventory generation command
+// CLI flags
+var projectID string
+var containerID string
+var ztpIP string
+var skipZTP bool
+var manualDevices []string
+
+// gns3InventoryCmd is the Cobra command for generating Ansible inventory
 var gns3InventoryCmd = &cobra.Command{
 	Use:   "gns3-inventory",
-	Short: "Generate an Ansible inventory from ZTP-assigned IPs",
+	Short: "Generate an Ansible inventory from the ZTP server or manual input",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("🔄 Fetching assigned IPs from ZTP Server...")
+		fmt.Println("🔄 Fetching assigned IPs from ZTP Server or manual input...")
 
-		// Get ZTP Server IP from env or ask user
-		ztpIP := os.Getenv("ZTP_IP")
-		if ztpIP == "" {
-			fmt.Print("Enter ZTP Server IP: ")
-			fmt.Scanln(&ztpIP)
-		}
+		var devices []ZTPDevice
 
-		// Fetch assigned IPs
-		assignedIPs, err := getZTPIps(ztpIP)
-		if err != nil {
-			log.Fatalf("❌ Failed to fetch IPs from ZTP: %v", err)
-		}
-
-		if len(assignedIPs) == 0 {
-			log.Fatal("⚠️ No assigned IPs found. Ensure routers have requested DHCP leases.")
-		}
-
-		// Interactive inventory setup
-		var devices []DeviceInfo
-		reader := bufio.NewReader(os.Stdin)
-
-		fmt.Println("🛠️ Setting up Ansible Inventory...")
-		for name, ip := range assignedIPs {
-			fmt.Printf("\n🔹 Configuring %s (%s)\n", name, ip)
-
-			// Ask for username
-			fmt.Print("Enter Ansible username [default: admin]: ")
-			user, _ := reader.ReadString('\n')
-			user = strings.TrimSpace(user)
-			if user == "" {
-				user = "admin"
+		// 1) If skipZTP is false, attempt to fetch from ZTP (with a 5-min wait)
+		if !skipZTP {
+			if ztpIP == "" {
+				// check environment or prompt
+				ztpIP = os.Getenv("ZTP_IP")
+				if ztpIP == "" {
+					fmt.Print("Enter ZTP Server IP (or IP:port): ")
+					reader := bufio.NewReader(os.Stdin)
+					ipInput, _ := reader.ReadString('\n')
+					ztpIP = strings.TrimSpace(ipInput)
+				}
 			}
 
-			// Ask for password (hidden input)
-			fmt.Print("Enter password: ")
-			password, _ := reader.ReadString('\n')
-			password = strings.TrimSpace(password)
+			// Attempt up to 5 minutes (300 seconds) in a loop
+			maxWait := 300
+			interval := 10
+			totalWait := 0
+			fmt.Printf("⏳ Waiting up to 5 minutes for ZTP server at http://%s/inventory to become ready...\n", ztpIP)
 
-			// Ask for Ansible network OS
-			fmt.Print("Enter network OS (e.g., ios, iosxr, nxos): ")
-			networkOS, _ := reader.ReadString('\n')
-			networkOS = strings.TrimSpace(networkOS)
-
-			// Ask if SSH key args are needed
-			fmt.Print("Require SSH args for old Cisco routers? (yes/no) [default: no]: ")
-			sshInput, _ := reader.ReadString('\n')
-			sshArgs := ""
-			if strings.TrimSpace(strings.ToLower(sshInput)) == "yes" {
-				sshArgs = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+			for totalWait < maxWait {
+				ztpDevices, err := fetchZTPDevices(ztpIP)
+				if err == nil && len(ztpDevices) > 0 {
+					devices = ztpDevices
+					fmt.Printf("✅ Fetched %d devices from ZTP at %s\n", len(devices), ztpIP)
+					break
+				}
+				// Otherwise, keep waiting
+				fmt.Printf("ZTP not ready or no devices. Retrying in %d seconds... (Waited %d/%d)\n",
+					interval, totalWait, maxWait)
+				time.Sleep(time.Duration(interval) * time.Second)
+				totalWait += interval
 			}
 
-			devices = append(devices, DeviceInfo{
-				Name:      name,
-				IP:        ip,
-				User:      user,
-				Password:  password,
-				NetworkOS: networkOS,
-				SSHArgs:   sshArgs,
-			})
+			if len(devices) == 0 {
+				fmt.Printf("⚠️ ZTP fetch failed or no devices returned after %d seconds\n", maxWait)
+				fmt.Println("Falling back to manual input...")
+			}
 		}
 
-		// Save inventory
-		saveInventory(devices)
-		fmt.Println("✅ Ansible inventory generated successfully!")
+		// 2) If we have no devices from ZTP, parse manual input
+		if len(devices) == 0 && len(manualDevices) > 0 {
+			for _, md := range manualDevices {
+				parts := strings.SplitN(md, "=", 2)
+				if len(parts) != 2 {
+					log.Fatalf("Invalid manual device input %q (expected NAME=IP)", md)
+				}
+				devices = append(devices, ZTPDevice{
+					Name: strings.TrimSpace(parts[0]),
+					IP:   strings.TrimSpace(parts[1]),
+				})
+			}
+			fmt.Printf("✅ Using %d manual devices.\n", len(devices))
+		}
+
+		// 3) If devices is still empty, error out
+		if len(devices) == 0 {
+			log.Fatal("❌ No devices found or provided. Exiting.")
+		}
+
+		// 4) Build final inventory lines
+		var lines []string
+		lines = append(lines, "[ztp-routers]") // or any group name
+		for _, d := range devices {
+			// Example line: "R1 ansible_host=10.0.0.1 ansible_user=admin ansible_password=admin"
+			line := fmt.Sprintf("%s ansible_host=%s ansible_user=admin ansible_password=admin", d.Name, d.IP)
+			lines = append(lines, line)
+		}
+
+		// 5) Write inventory files
+		if err := writeInventories(lines); err != nil {
+			log.Fatalf("❌ Error writing inventories: %v", err)
+		}
 	},
 }
 
-// getZTPIps fetches assigned IPs from the ZTP server
-func getZTPIps(ztpIP string) (map[string]string, error) {
-	cmd := exec.Command("curl", "-s", fmt.Sprintf("http://%s/api/dhcp-leases", ztpIP))
-	output, err := cmd.Output()
+// fetchZTPDevices queries `http://{ztpIP}/inventory` and parses JSON of the form:
+// { "unknown": ["192.168.100.100 ansible_user=admin ansible_password=admin", ...] }
+func fetchZTPDevices(ztpIP string) ([]ZTPDevice, error) {
+	url := fmt.Sprintf("http://%s/inventory", ztpIP)
+	fmt.Printf("Attempting ZTP fetch from %s\n", url)
+
+	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("HTTP GET failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("Non-200 status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var leases []map[string]interface{}
-	err = json.Unmarshal(output, &leases)
-	if err != nil {
-		return nil, err
+	// We'll parse a JSON object that looks like: {"unknown": [...]}
+	// Each line in "unknown" e.g. "192.168.100.100 ansible_user=admin ansible_password=admin"
+	var ztpResp struct {
+		Unknown []string `json:"unknown"`
+	}
+	dec := json.NewDecoder(resp.Body)
+	if err := dec.Decode(&ztpResp); err != nil {
+		return nil, fmt.Errorf("JSON decode error: %v", err)
 	}
 
-	assignedIPs := make(map[string]string)
-	for _, lease := range leases {
-		if ip, ok := lease["ip-address"].(string); ok {
-			if hostname, exists := lease["hostname"].(string); exists {
-				assignedIPs[hostname] = ip
+	// Convert each line in Unknown[] to a ZTPDevice
+	var devices []ZTPDevice
+	for _, line := range ztpResp.Unknown {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		// First field is IP
+		ip := fields[0]
+		// We'll just call the device "ZTP" or "unknown" for the name.
+		dev := ZTPDevice{
+			Name: "unknown",
+			IP:   ip,
+		}
+		devices = append(devices, dev)
+	}
+
+	return devices, nil
+}
+
+// writeInventories writes inventory.ini and ansible-inventory.yaml
+func writeInventories(lines []string) error {
+	// 1) INI
+	iniPath := "inventory.ini"
+	if err := os.WriteFile(iniPath, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		return err
+	}
+	fmt.Printf("✅ Wrote %s\n", iniPath)
+
+	// 2) YAML
+	yamlPath := "ansible-inventory.yaml"
+	// Quick YAML: single group "ztp-routers"
+	var sb strings.Builder
+	sb.WriteString("all:\n")
+	sb.WriteString("  hosts:\n")
+
+	// parse lines => e.g. "R1 ansible_host=1.1.1.1 ..."
+	for _, l := range lines[1:] { // skip the group name line
+		fields := strings.Fields(l)
+		if len(fields) < 2 {
+			continue
+		}
+		hostName := fields[0]
+		sb.WriteString(fmt.Sprintf("    %s:\n", hostName))
+		// parse "ansible_host=1.1.1.1"
+		for _, f := range fields[1:] {
+			pair := strings.SplitN(f, "=", 2)
+			if len(pair) == 2 {
+				sb.WriteString(fmt.Sprintf("      %s: %s\n", pair[0], pair[1]))
 			}
 		}
 	}
-
-	return assignedIPs, nil
-}
-
-// saveInventory writes the inventory to INI and YAML formats
-func saveInventory(devices []DeviceInfo) {
-	// Save as inventory.ini
-	iniFile, _ := os.Create("inventory.ini")
-	defer iniFile.Close()
-	for _, device := range devices {
-		iniFile.WriteString(fmt.Sprintf("[%s]\n", device.Name))
-		iniFile.WriteString(fmt.Sprintf("%s ansible_user=%s ansible_password=%s ansible_network_os=%s",
-			device.IP, device.User, device.Password, device.NetworkOS))
-		if device.SSHArgs != "" {
-			iniFile.WriteString(fmt.Sprintf(" ansible_ssh_common_args='%s'", device.SSHArgs))
-		}
-		iniFile.WriteString("\n\n")
+	if err := os.WriteFile(yamlPath, []byte(sb.String()), 0644); err != nil {
+		return err
 	}
+	fmt.Printf("✅ Wrote %s\n", yamlPath)
 
-	// Save as ansible-inventory.yaml
-	yamlFile, _ := os.Create("ansible-inventory.yaml")
-	defer yamlFile.Close()
-	yamlFile.WriteString("all:\n  hosts:\n")
-	for _, device := range devices {
-		yamlFile.WriteString(fmt.Sprintf("    %s:\n", device.Name))
-		yamlFile.WriteString(fmt.Sprintf("      ansible_host: %s\n", device.IP))
-		yamlFile.WriteString(fmt.Sprintf("      ansible_user: %s\n", device.User))
-		yamlFile.WriteString(fmt.Sprintf("      ansible_password: %s\n", device.Password))
-		yamlFile.WriteString(fmt.Sprintf("      ansible_network_os: %s\n", device.NetworkOS))
-		if device.SSHArgs != "" {
-			yamlFile.WriteString(fmt.Sprintf("      ansible_ssh_common_args: \"%s\"\n", device.SSHArgs))
-		}
-		yamlFile.WriteString("\n")
-	}
+	return nil
 }
 
 func init() {
+	gns3InventoryCmd.Flags().StringVar(&projectID, "project-id", "", "GNS3 project ID (optional if not needed)")
+	gns3InventoryCmd.Flags().StringVar(&containerID, "container-id", "", "Docker container ID in GNS3 (optional if not needed)")
+	gns3InventoryCmd.Flags().StringVar(&ztpIP, "ztp", "", "ZTP server IP/host (overrides environment ZTP_IP)")
+	gns3InventoryCmd.Flags().BoolVar(&skipZTP, "skip-ztp", false, "Skip querying ZTP server if set")
+	gns3InventoryCmd.Flags().StringSliceVar(&manualDevices, "devices", []string{}, "Manual device entries in NAME=IP format")
+
 	rootCmd.AddCommand(gns3InventoryCmd)
 }

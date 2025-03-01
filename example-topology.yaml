@@ -1,4 +1,4 @@
-project: "netdevops-lab-3"
+project: "netdevop-ansible-poc1"
 start_nodes: true   # This will start all nodes after deployment
 
 routers:
@@ -7,11 +7,37 @@ routers:
   - name: "ZTP"
     template: "ztp"
 
+switches:
+  - name: "Core-SW"
+
+clouds:
+  - name: "Cloud"
+
 links:
+  # Cloud <--> Core-SW
+  - endpoints:
+      - name: "Cloud"
+        adapter: 0
+        port: 0
+      - name: "Core-SW"
+        adapter: 0
+        port: 1
+
+  # R1 <--> Core-SW
   - endpoints:
       - name: "R1"
         adapter: 0
         port: 0
+      - name: "Core-SW"
+        adapter: 0
+        port: 2
+
+  # ZTP <--> Core-SW
+  - endpoints:
       - name: "ZTP"
         adapter: 0
         port: 0
+      - name: "Core-SW"
+        adapter: 0
+        port: 3
+
