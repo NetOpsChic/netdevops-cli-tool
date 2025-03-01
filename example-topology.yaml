@@ -1,5 +1,5 @@
 project: "netdevops-lab-3"
-start_nodes: false   # This will start all nodes after deployment
+start_nodes: true   # This will start all nodes after deployment
 
 routers:
   - name: "R1"
