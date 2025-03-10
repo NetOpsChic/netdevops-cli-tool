@@ -41,3 +41,52 @@ type Link struct {
 // CLILink is an alias for Link, used in CLI mode.
 // This ensures that CLI code can use the same structure as YAML mode without duplication.
 type CLILink = Link
+
+var (
+	// configFile holds the path to the deployment YAML file.
+	configFile string
+
+	// inventoryFile holds the path to the ansible inventory file.
+	inventoryFile string = "./ansible-inventory.yaml"
+)
+
+// IPConfig represents a single interface IP configuration.
+type IPConfig struct {
+	Interface string
+	IPAddress string
+	Mask      string // You can set a default (e.g., "255.255.255.0") if not provided.
+	Secondary bool
+}
+
+// PlaybookData is the data passed to the Ansible playbook template.
+type PlaybookData struct {
+	RouterName   string
+	IPConfigs    []IPConfig
+	StaticRoutes []StaticRoute
+	OSPFv3       *OSPFv3Config
+}
+
+// StaticRoute represents a static route configuration.
+type StaticRoute struct {
+	DestNetwork string
+	SubnetMask  string
+	NextHop     string
+	Interface   string
+}
+
+// OSPFv3Interface represents OSPFv3 settings for a given interface.
+type OSPFv3Interface struct {
+	Name    string
+	Cost    int
+	Passive bool
+}
+
+// OSPFv3Config represents OSPFv3 dynamic routing configuration.
+type OSPFv3Config struct {
+	RouterID   string
+	Area       string
+	Networks   []string
+	Interfaces []OSPFv3Interface
+	Stub       interface{}
+	NSSA       interface{}
+}

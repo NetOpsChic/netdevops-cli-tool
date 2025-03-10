@@ -1,0 +1,56 @@
+project: "netdevop-ansible-poc2"
+start_nodes: true
+
+routers:
+  - name: "R1"
+    template: "arista-eos"
+    config:
+      interface: "Ethernet1"
+      ip_address: "192.168.1.10/24"
+      static_routes:
+        - dest_network: "10.1.1.0"
+          subnet_mask: "255.255.255.0"
+          next_hop: "192.168.1.1"
+      ospfv3:
+        router_id: "1.1.1.1"
+        area: "0.0.0.0"
+        networks:
+          - "192.168.1.0/24"
+        interfaces:
+          - name: "Ethernet1"
+            cost: 10
+            passive: false
+
+switches:
+  - name: "Core-SW"
+
+clouds:
+  - name: "Cloud"
+
+links:
+  # Cloud <--> Core-SW
+  - endpoints:
+      - name: "Cloud"
+        adapter: 0
+        port: 0
+      - name: "Core-SW"
+        adapter: 0
+        port: 1
+
+  # R1 <--> Core-SW
+  - endpoints:
+      - name: "R1"
+        adapter: 0
+        port: 0
+      - name: "Core-SW"
+        adapter: 0
+        port: 2
+
+  # ZTP <--> Core-SW
+  - endpoints:
+      - name: "ZTP"
+        adapter: 0
+        port: 0
+      - name: "Core-SW"
+        adapter: 0
+        port: 3

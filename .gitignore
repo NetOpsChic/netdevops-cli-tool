@@ -6,3 +6,5 @@ terraform*
 terraform/
 txt
 ignore
+ansible-inventory.yaml
+inventory.ini

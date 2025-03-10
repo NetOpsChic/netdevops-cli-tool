@@ -1,0 +1,62 @@
+project: "ospf-multi-router"
+start_nodes: true
+
+routers:
+  - name: "R1"
+    template: "arista-eos"
+    config:
+      interface: "Ethernet1"
+      ip_address: "192.168.1.10/24"
+      ospfv3:
+        router_id: "1.1.1.1"
+        area: "0.0.0.0"
+        networks:
+          - "192.168.1.0/24"
+        interfaces:
+          - name: "Ethernet1"
+            cost: 10
+            passive: false
+
+  - name: "R2"
+    template: "arista-eos"
+    config:
+      interface: "Ethernet1"
+      ip_address: "192.168.2.10/24"
+      ospfv3:
+        router_id: "2.2.2.2"
+        area: "0.0.0.0"
+        networks:
+          - "192.168.2.0/24"
+        interfaces:
+          - name: "Ethernet1"
+            cost: 20
+            passive: false
+
+  - name: "R3"
+    template: "arista-eos"
+    config:
+      interface: "Ethernet1"
+      ip_address: "192.168.3.10/24"
+      ospfv3:
+        router_id: "3.3.3.3"
+        area: "0.0.0.0"
+        networks:
+          - "192.168.3.0/24"
+        interfaces:
+          - name: "Ethernet1"
+            cost: 30
+            passive: false
+
+switches:
+  - name: "SW1"
+
+links:
+  - endpoints:
+      - name: "R1"
+      - name: "SW1"
+  - endpoints:
+      - name: "R2"
+      - name: "SW1"
+  - endpoints:
+      - name: "R3"
+      - name: "SW1"

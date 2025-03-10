@@ -9,8 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var configFile string
-
 // gns3DeployYamlCmd represents the YAML-based GNS3 deployment command
 var gns3DeployYamlCmd = &cobra.Command{
 	Use:   "gns3-deploy-yaml",
