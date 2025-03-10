@@ -16,6 +16,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Redistribution represents a redistribution rule in the user-friendly YAML.
+type Redistribution struct {
+	Protocol string `yaml:"protocol"`            // User input (e.g. "bgp", "static", "connected")
+	Metric   int    `yaml:"metric,omitempty"`    // User input (ignored in playbook output)
+	RouteMap string `yaml:"route_map,omitempty"` // Optional user input; if provided, mapped to route_map
+}
+
 // Deployment represents the structure of the combined deployment/configuration YAML.
 type Deployment struct {
 	Project    string `yaml:"project"`
@@ -41,9 +48,15 @@ type Deployment struct {
 					Cost    int    `yaml:"cost"`
 					Passive bool   `yaml:"passive"`
 				} `yaml:"interfaces"`
-				Stub interface{} `yaml:"stub"` // Changed from bool to interface{}
-				NSSA interface{} `yaml:"nssa"` // Changed from bool to interface{}
+				Stub         interface{}      `yaml:"stub"`         // Changed from bool to interface{}
+				NSSA         interface{}      `yaml:"nssa"`         // Changed from bool to interface{}
+				Redistribute []Redistribution `yaml:"redistribute"` // User-friendly redistribution rules
 			} `yaml:"ospfv3"`
+			BGP *struct {
+				LocalAS      int              `yaml:"local_as"`
+				Neighbor     string           `yaml:"neighbor"`
+				Redistribute []Redistribution `yaml:"redistribute"` // BGP redistribution rules
+			} `yaml:"bgp"`
 		} `yaml:"config"`
 	} `yaml:"routers"`
 	// Other fields (switches, clouds, links) can be added as needed.
@@ -85,17 +98,11 @@ var gns3ConfigureCmd = &cobra.Command{
 			if router.Config != nil && router.Config.Interface != "" && router.Config.IPAddress != "" {
 				// Prepare the data to render the playbook.
 				pbData := PlaybookData{
-					RouterName: router.Name,
-					IPConfigs: []IPConfig{
-						{
-							Interface: router.Config.Interface,
-							IPAddress: router.Config.IPAddress,
-							Mask:      "255.255.255.0", // Default value; adjust as needed.
-							Secondary: true,
-						},
-					},
+					RouterName:   router.Name,
+					IPConfigs:    []IPConfig{{Interface: router.Config.Interface, IPAddress: router.Config.IPAddress, Mask: "255.255.255.0", Secondary: true}},
 					StaticRoutes: []StaticRoute{},
 					OSPFv3:       nil,
+					BGP:          nil,
 				}
 
 				// Append static routes if available.
@@ -109,6 +116,7 @@ var gns3ConfigureCmd = &cobra.Command{
 						})
 					}
 				}
+
 				// Append OSPFv3 configuration if available.
 				if router.Config.OSPFv3 != nil {
 					ospf := router.Config.OSPFv3
@@ -120,7 +128,7 @@ var gns3ConfigureCmd = &cobra.Command{
 							Passive: iface.Passive,
 						})
 					}
-					// Process Stub field: if it's a bool and true, convert to an empty map; if it's a map, use it.
+					// Process Stub field.
 					var stubVal interface{}
 					if ospf.Stub != nil {
 						if v, ok := ospf.Stub.(bool); ok {
@@ -130,13 +138,12 @@ var gns3ConfigureCmd = &cobra.Command{
 								stubVal = nil
 							}
 						} else if m, ok := ospf.Stub.(map[interface{}]interface{}); ok {
-							// Convert map[interface{}]interface{} to map[string]interface{}
 							stubVal = convertMap(m)
 						} else if m, ok := ospf.Stub.(map[string]interface{}); ok {
 							stubVal = m
 						}
 					}
-					// Process NSSA field similarly.
+					// Process NSSA field.
 					var nssaVal interface{}
 					if ospf.NSSA != nil {
 						if v, ok := ospf.NSSA.(bool); ok {
@@ -155,12 +162,23 @@ var gns3ConfigureCmd = &cobra.Command{
 						}
 					}
 					pbData.OSPFv3 = &OSPFv3Config{
-						RouterID:   ospf.RouterID,
-						Area:       ospf.Area,
-						Networks:   ospf.Networks,
-						Interfaces: ospfIfaces,
-						Stub:       stubVal,
-						NSSA:       nssaVal,
+						RouterID:     ospf.RouterID,
+						Area:         ospf.Area,
+						Networks:     ospf.Networks,
+						Interfaces:   ospfIfaces,
+						Stub:         stubVal,
+						NSSA:         nssaVal,
+						Redistribute: ospf.Redistribute, // This will be mapped in the template.
+					}
+				}
+
+				// Append BGP configuration if available.
+				if router.Config.BGP != nil {
+					bgp := router.Config.BGP
+					pbData.BGP = &BGPConfig{
+						LocalAS:      bgp.LocalAS,
+						Neighbor:     bgp.Neighbor,
+						Redistribute: bgp.Redistribute,
 					}
 				}
 

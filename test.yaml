@@ -16,9 +16,14 @@ routers:
           - name: "Ethernet2"
             cost: 10
             passive: false
+        redistribute:
+          - protocol: "bgp"
+            metric: 10
+          - protocol: "static"
+            metric: 20
         stub: false
-        nssa: true
-        
+        nssa: false
+
 switches:
   - name: "Core-SW"
 

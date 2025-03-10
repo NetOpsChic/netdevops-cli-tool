@@ -1,10 +1,9 @@
+// File: cmd/ConfigureAristaTemplate.go
 package cmd
 
-// ConfigureStaticRoutingTemplate is an Ansible playbook template that configures
-// IPv4 addresses on interfaces and IPv4 static routes using Arista EOS modules.
-// For static routes, the YAML input only needs three (or optionally four) arguments:
-// dest_network, subnet_mask, and next_hop (with an optional interface).
-// The template uses a custom function maskToPrefix to convert the subnet mask into a CIDR prefix.
+// ConfigureAristaTemplate is an Ansible playbook template that configures
+// IPv4 interfaces, IPv4 static routes, and OSPFv3 routing (including redistribution)
+// using Arista EOS modules.
 const ConfigureAristaTemplate = `- hosts: all
   gather_facts: no
   connection: network_cli
@@ -38,6 +37,7 @@ const ConfigureAristaTemplate = `- hosts: all
 {{- end }}
         state: merged
 {{- end }}
+
 {{- if .OSPFv3 }}
     - name: Configuring OSPFv3 routing process.
       arista.eos.eos_ospfv3:
@@ -62,9 +62,16 @@ const ConfigureAristaTemplate = `- hosts: all
                         default_information_originate: true
                         no_summary: false
                       {{- end }}
+                  {{- if .OSPFv3.Redistribute }}
+                  redistribute:
+{{- range .OSPFv3.Redistribute }}
+                    - routes: "{{ .Protocol }}"
+{{- if .RouteMap }}
+                      route_map: "{{ .RouteMap }}"
+{{- end }}
+{{- end }}
+                  {{- end }}
+                - afi: "ipv6"
         state: merged
 {{- end }}
-
-
-
 `

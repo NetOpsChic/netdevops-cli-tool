@@ -58,14 +58,6 @@ type IPConfig struct {
 	Secondary bool
 }
 
-// PlaybookData is the data passed to the Ansible playbook template.
-type PlaybookData struct {
-	RouterName   string
-	IPConfigs    []IPConfig
-	StaticRoutes []StaticRoute
-	OSPFv3       *OSPFv3Config
-}
-
 // StaticRoute represents a static route configuration.
 type StaticRoute struct {
 	DestNetwork string
@@ -81,12 +73,26 @@ type OSPFv3Interface struct {
 	Passive bool
 }
 
-// OSPFv3Config represents OSPFv3 dynamic routing configuration.
 type OSPFv3Config struct {
-	RouterID   string
-	Area       string
-	Networks   []string
-	Interfaces []OSPFv3Interface
-	Stub       interface{}
-	NSSA       interface{}
+	RouterID     string
+	Area         string
+	Networks     []string
+	Interfaces   []OSPFv3Interface
+	Stub         interface{}
+	NSSA         interface{}
+	Redistribute []Redistribution // Newly added
+}
+
+type BGPConfig struct {
+	LocalAS      int
+	Neighbor     string
+	Redistribute []Redistribution
+}
+
+type PlaybookData struct {
+	RouterName   string
+	IPConfigs    []IPConfig
+	StaticRoutes []StaticRoute
+	OSPFv3       *OSPFv3Config
+	BGP          *BGPConfig // Newly added
 }
