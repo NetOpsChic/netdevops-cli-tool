@@ -74,4 +74,31 @@ const ConfigureAristaTemplate = `- hosts: all
                 - afi: "ipv6"
         state: merged
 {{- end }}
+{{- if .BGP }}
+    - name: Configuring BGP global settings.
+      arista.eos.eos_bgp_global:
+        config:
+          as_number: "{{ .BGP.LocalAS }}"
+          router_id: "{{ .BGP.RouterID }}"
+          neighbor:
+            - peer: "{{ .BGP.Neighbor }}"
+              remote_as: "{{ .BGP.RemoteAS }}"
+          network:
+{{- range .BGP.Networks }}
+            - address: "{{ . }}"
+{{- end }}
+          redistribute:
+{{- range .BGP.Redistribute }}
+            - protocol: "{{ .Protocol | lower }}"
+{{- if .RouteMap }}
+              route_map: "{{ .RouteMap }}"
+{{- end }}
+{{- if .IsisLevel }}
+              isis_level: "{{ .IsisLevel }}"
+{{- end }}
+{{- if .OspfRoute }}
+              ospf_route: "{{ .OspfRoute }}"
+{{- end }}
+{{- end }}
+{{- end }}
 `

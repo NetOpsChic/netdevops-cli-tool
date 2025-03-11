@@ -16,12 +16,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Redistribution represents a redistribution rule in the user-friendly YAML.
-type Redistribution struct {
-	Protocol string `yaml:"protocol"`            // User input (e.g. "bgp", "static", "connected")
-	Metric   int    `yaml:"metric,omitempty"`    // User input (ignored in playbook output)
-	RouteMap string `yaml:"route_map,omitempty"` // Optional user input; if provided, mapped to route_map
-}
+var verbose bool
 
 // Deployment represents the structure of the combined deployment/configuration YAML.
 type Deployment struct {
@@ -48,31 +43,30 @@ type Deployment struct {
 					Cost    int    `yaml:"cost"`
 					Passive bool   `yaml:"passive"`
 				} `yaml:"interfaces"`
-				Stub         interface{}      `yaml:"stub"`         // Changed from bool to interface{}
-				NSSA         interface{}      `yaml:"nssa"`         // Changed from bool to interface{}
-				Redistribute []Redistribution `yaml:"redistribute"` // User-friendly redistribution rules
+				Stub         interface{}      `yaml:"stub"`
+				NSSA         interface{}      `yaml:"nssa"`
+				Redistribute []Redistribution `yaml:"redistribute"`
 			} `yaml:"ospfv3"`
 			BGP *struct {
 				LocalAS      int              `yaml:"local_as"`
-				Neighbor     string           `yaml:"neighbor"`
-				Redistribute []Redistribution `yaml:"redistribute"` // BGP redistribution rules
+				RouterID     string           `yaml:"router_id"` // BGP router ID
+				RemoteAS     int              `yaml:"remote_as"`
+				Neighbor     string           `yaml:"neighbor"` // Peer IP address
+				Networks     []string         `yaml:"networks,omitempty"`
+				Redistribute []Redistribution `yaml:"redistribute"`
 			} `yaml:"bgp"`
 		} `yaml:"config"`
 	} `yaml:"routers"`
-	// Other fields (switches, clouds, links) can be added as needed.
 }
 
-// gns3ConfigureCmd represents the gns3-configure command.
 var gns3ConfigureCmd = &cobra.Command{
 	Use:   "gns3-configure",
 	Short: "Render and execute Ansible playbooks for device configuration based on a deployment YAML",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Ensure the deployment YAML file is provided using the --config flag.
 		if configFile == "" {
 			return fmt.Errorf("deployment YAML file must be provided using the --config flag")
 		}
 
-		// Read and unmarshal the deployment YAML file.
 		data, err := ioutil.ReadFile(configFile)
 		if err != nil {
 			return fmt.Errorf("failed to read deployment file: %v", err)
@@ -83,20 +77,17 @@ var gns3ConfigureCmd = &cobra.Command{
 			return fmt.Errorf("failed to parse deployment YAML: %v", err)
 		}
 
-		// Parse the playbook template.
 		tmpl, err := template.New("playbook").Funcs(sprig.TxtFuncMap()).Funcs(template.FuncMap{
-			"maskToPrefix":      maskToPrefix,      // converts dotted mask to CIDR prefix
-			"cidrSubnetAddress": cidrSubnetAddress, // extracts subnet address from CIDR
-			"cidrToMask":        cidrToMask,        // converts CIDR prefix to dotted-decimal mask
+			"maskToPrefix":      maskToPrefix,
+			"cidrSubnetAddress": cidrSubnetAddress,
+			"cidrToMask":        cidrToMask,
 		}).Parse(ConfigureAristaTemplate)
 		if err != nil {
 			return fmt.Errorf("failed to parse ansible playbook template: %v", err)
 		}
 
-		// Iterate over routers that have configuration details.
 		for _, router := range deployment.Routers {
 			if router.Config != nil && router.Config.Interface != "" && router.Config.IPAddress != "" {
-				// Prepare the data to render the playbook.
 				pbData := PlaybookData{
 					RouterName:   router.Name,
 					IPConfigs:    []IPConfig{{Interface: router.Config.Interface, IPAddress: router.Config.IPAddress, Mask: "255.255.255.0", Secondary: true}},
@@ -105,8 +96,7 @@ var gns3ConfigureCmd = &cobra.Command{
 					BGP:          nil,
 				}
 
-				// Append static routes if available.
-				if router.Config.StaticRoutes != nil && len(router.Config.StaticRoutes) > 0 {
+				if router.Config.StaticRoutes != nil {
 					for _, sr := range router.Config.StaticRoutes {
 						pbData.StaticRoutes = append(pbData.StaticRoutes, StaticRoute{
 							DestNetwork: sr.DestNetwork,
@@ -117,7 +107,6 @@ var gns3ConfigureCmd = &cobra.Command{
 					}
 				}
 
-				// Append OSPFv3 configuration if available.
 				if router.Config.OSPFv3 != nil {
 					ospf := router.Config.OSPFv3
 					var ospfIfaces []OSPFv3Interface
@@ -128,7 +117,6 @@ var gns3ConfigureCmd = &cobra.Command{
 							Passive: iface.Passive,
 						})
 					}
-					// Process Stub field.
 					var stubVal interface{}
 					if ospf.Stub != nil {
 						if v, ok := ospf.Stub.(bool); ok {
@@ -143,7 +131,6 @@ var gns3ConfigureCmd = &cobra.Command{
 							stubVal = m
 						}
 					}
-					// Process NSSA field.
 					var nssaVal interface{}
 					if ospf.NSSA != nil {
 						if v, ok := ospf.NSSA.(bool); ok {
@@ -168,36 +155,50 @@ var gns3ConfigureCmd = &cobra.Command{
 						Interfaces:   ospfIfaces,
 						Stub:         stubVal,
 						NSSA:         nssaVal,
-						Redistribute: ospf.Redistribute, // This will be mapped in the template.
+						Redistribute: ospf.Redistribute,
 					}
 				}
 
-				// Append BGP configuration if available.
 				if router.Config.BGP != nil {
 					bgp := router.Config.BGP
 					pbData.BGP = &BGPConfig{
 						LocalAS:      bgp.LocalAS,
+						RouterID:     bgp.RouterID,
+						RemoteAS:     bgp.RemoteAS,
 						Neighbor:     bgp.Neighbor,
+						Networks:     bgp.Networks,
 						Redistribute: bgp.Redistribute,
 					}
 				}
 
-				// Create a temporary file to store the rendered playbook.
 				tempFile, err := ioutil.TempFile("", fmt.Sprintf("configure_%s-*.yml", router.Name))
 				if err != nil {
 					return fmt.Errorf("failed to create temp file for router %s: %v", router.Name, err)
 				}
-				// Ensure the temporary file is removed after execution.
 				defer os.Remove(tempFile.Name())
 
-				// Render the template into the temporary file.
 				if err := tmpl.Execute(tempFile, pbData); err != nil {
 					return fmt.Errorf("failed to render playbook for router %s: %v", router.Name, err)
 				}
 				tempFile.Close()
 
-				// Construct the ansible-playbook command.
-				ansibleCmd := exec.Command("ansible-playbook", tempFile.Name(), "-i", inventoryFile)
+				// If verbose flag is enabled, print the rendered playbook.
+				if verbose {
+					rendered, err := ioutil.ReadFile(tempFile.Name())
+					if err != nil {
+						fmt.Printf("Warning: unable to read rendered playbook: %v\n", err)
+					} else {
+						fmt.Println("Rendered Playbook:")
+						fmt.Println(string(rendered))
+					}
+				}
+
+				// Build ansible-playbook command arguments.
+				args := []string{tempFile.Name(), "-i", inventoryFile}
+				if verbose {
+					args = append(args, "-vvv")
+				}
+				ansibleCmd := exec.Command("ansible-playbook", args...)
 				ansibleCmd.Env = os.Environ()
 
 				fmt.Printf("Executing ansible playbook for router %s with inventory '%s'...\n", router.Name, inventoryFile)
@@ -215,14 +216,11 @@ var gns3ConfigureCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(gns3ConfigureCmd)
-
-	// The --config flag specifies the deployment YAML file.
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 	gns3ConfigureCmd.Flags().StringVarP(&configFile, "config", "c", "", "Deployment YAML file containing topology and device configuration")
-	// The --inventory flag specifies the inventory file.
 	gns3ConfigureCmd.Flags().StringVar(&inventoryFile, "inventory", "./ansible-inventory.yaml", "Ansible inventory file path (default is ./ansible-inventory.yaml)")
 }
 
-// Helper: convertMap converts a map[interface{}]interface{} to map[string]interface{}.
 func convertMap(in map[interface{}]interface{}) map[string]interface{} {
 	out := make(map[string]interface{})
 	for key, value := range in {
@@ -231,8 +229,6 @@ func convertMap(in map[interface{}]interface{}) map[string]interface{} {
 	return out
 }
 
-// maskToPrefix converts a dotted-decimal subnet mask to a CIDR prefix length.
-// For example, "255.255.255.0" becomes "24".
 func maskToPrefix(mask string) string {
 	var count int
 	for _, octet := range strings.Split(mask, ".") {
@@ -246,7 +242,6 @@ func maskToPrefix(mask string) string {
 	return fmt.Sprintf("%d", count)
 }
 
-// cidrSubnetAddress extracts the IP portion of a CIDR (e.g., "192.168.1.0" from "192.168.1.0/24").
 func cidrSubnetAddress(cidr string) string {
 	parts := strings.Split(cidr, "/")
 	if len(parts) != 2 {
@@ -255,8 +250,6 @@ func cidrSubnetAddress(cidr string) string {
 	return parts[0]
 }
 
-// cidrToMask converts a CIDR prefix (from a CIDR string, e.g., "192.168.1.0/24")
-// into a dotted-decimal subnet mask (e.g., "255.255.255.0").
 func cidrToMask(cidr string) string {
 	parts := strings.Split(cidr, "/")
 	if len(parts) != 2 {

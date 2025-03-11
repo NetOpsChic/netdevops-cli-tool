@@ -7,22 +7,34 @@ routers:
     config:
       interface: "Ethernet1"
       ip_address: "192.168.1.10/24"
-      ospfv3:
+      bgp:
+        local_as: 65000
         router_id: "1.1.1.1"
-        area: "0.0.0.0"
+        remote_as: 65001
+        neighbor: "2.2.2.2"
         networks:
-          - "192.168.1.0/24"
-        interfaces:
-          - name: "Ethernet2"
-            cost: 10
-            passive: false
+          - "192.168.0.0/24"
         redistribute:
-          - protocol: "bgp"
-            metric: 10
           - protocol: "static"
-            metric: 20
-        stub: false
-        nssa: false
+            route_map: "map_static"
+          - protocol: "attached-host"
+
+      # ospfv3:
+      #   router_id: "1.1.1.1"
+      #   area: "0.0.0.0"
+      #   networks:
+      #     - "192.168.1.0/24"
+      #   interfaces:
+      #     - name: "Ethernet2"
+      #       cost: 10
+      #       passive: false
+      #   redistribute:
+      #     - protocol: "bgp"
+      #       metric: 10
+      #     - protocol: "static"
+      #       metric: 20
+      #   stub: false
+      #   nssa: false
 
 switches:
   - name: "Core-SW"

@@ -83,16 +83,29 @@ type OSPFv3Config struct {
 	Redistribute []Redistribution // Newly added
 }
 
-type BGPConfig struct {
-	LocalAS      int
-	Neighbor     string
-	Redistribute []Redistribution
-}
-
 type PlaybookData struct {
 	RouterName   string
 	IPConfigs    []IPConfig
 	StaticRoutes []StaticRoute
 	OSPFv3       *OSPFv3Config
 	BGP          *BGPConfig // Newly added
+}
+
+// BGPConfig represents the BGP configuration.
+type BGPConfig struct {
+	RouterID     string
+	LocalAS      int
+	RemoteAS     int
+	Neighbor     string
+	Networks     []string
+	Redistribute []Redistribution
+}
+
+// Redistribution represents a redistribution rule in the user-friendly YAML.
+type Redistribution struct {
+	Protocol  string `yaml:"protocol"`
+	Metric    int    `yaml:"metric,omitempty"`
+	RouteMap  string `yaml:"route_map,omitempty"`
+	IsisLevel string `yaml:"isis_level,omitempty"` // Optional; if provided, passed to module
+	OspfRoute string `yaml:"ospf_route,omitempty"`
 }
