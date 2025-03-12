@@ -1,0 +1,53 @@
+project: "netdevop-ansible-poc2"
+start_nodes: true
+
+routers:
+  - name: "R1"
+    template: "arista-eos"
+    config:
+      interface: "Ethernet1"
+      ip_address: "192.168.1.10/24"
+      bgp:
+        local_as: 65000
+        router_id: "1.1.1.1"
+        remote_as: 65001
+        neighbor: "2.2.2.2"
+        networks:
+          - "192.168.0.0/24"
+        redistribute:
+          - protocol: "static"
+            route_map: "map_static"
+          - protocol: "attached-host"
+switches:
+  - name: "Core-SW"
+
+clouds:
+  - name: "Cloud"
+
+links:
+  # Cloud <--> Core-SW
+  - endpoints:
+      - name: "Cloud"
+        adapter: 0
+        port: 0
+      - name: "Core-SW"
+        adapter: 0
+        port: 1
+
+  # R1 <--> Core-SW
+  - endpoints:
+      - name: "R1"
+        adapter: 0
+        port: 0
+      - name: "Core-SW"
+        adapter: 0
+        port: 2
+
+  # ZTP <--> Core-SW
+  - endpoints:
+      - name: "ZTP"
+        adapter: 0
+        port: 0
+      - name: "Core-SW"
+        adapter: 0
+        port: 3

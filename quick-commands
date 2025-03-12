@@ -1,0 +1,7 @@
+./netdevops gns3-deploy --project "MyCustomProject" --routers 3 --switches 1 --clouds 1 --template c7200 --links "R1:0/0-SW1:0/1,R2-SW1,R3-SW1,SW1:0/3-Cloud1:0/0"
+./netdevops gns3-deploy-yaml -c test.yaml
+./netdevops gns-destroy
+./netdevops gns3-inventory --ztp 192.168.100.2:5000 --vendor arista
+./netdevops gns3-configure -c test.yaml --inventory ansible-inventory.yaml
+export ANSIBLE_HOST_KEY_CHECKING=False
+go build -o netdevops
