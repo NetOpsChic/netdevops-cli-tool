@@ -18,45 +18,54 @@ import (
 
 var verbose bool
 
-// Deployment represents the structure of the combined deployment/configuration YAML.
-type Deployment struct {
-	Project    string `yaml:"project"`
-	StartNodes bool   `yaml:"start_nodes"`
-	Routers    []struct {
-		Name     string `yaml:"name"`
-		Template string `yaml:"template"`
-		Config   *struct {
-			Interface    string `yaml:"interface"`
-			IPAddress    string `yaml:"ip_address"`
-			StaticRoutes []struct {
-				DestNetwork string `yaml:"dest_network"`
-				SubnetMask  string `yaml:"subnet_mask"`
-				NextHop     string `yaml:"next_hop"`
-				Interface   string `yaml:"interface,omitempty"`
-			} `yaml:"static_routes"`
-			OSPFv3 *struct {
-				RouterID   string   `yaml:"router_id"`
-				Area       string   `yaml:"area"`
-				Networks   []string `yaml:"networks"`
-				Interfaces []struct {
-					Name    string `yaml:"name"`
-					Cost    int    `yaml:"cost"`
-					Passive bool   `yaml:"passive"`
-				} `yaml:"interfaces"`
-				Stub         interface{}      `yaml:"stub"`
-				NSSA         interface{}      `yaml:"nssa"`
-				Redistribute []Redistribution `yaml:"redistribute"`
-			} `yaml:"ospfv3"`
-			BGP *struct {
-				LocalAS      int              `yaml:"local_as"`
-				RouterID     string           `yaml:"router_id"` // BGP router ID
-				RemoteAS     int              `yaml:"remote_as"`
-				Neighbor     string           `yaml:"neighbor"` // Peer IP address
-				Networks     []string         `yaml:"networks,omitempty"`
-				Redistribute []Redistribution `yaml:"redistribute"`
-			} `yaml:"bgp"`
-		} `yaml:"config"`
-	} `yaml:"routers"`
+// ConfigBlock represents a single configuration block for a router.
+type ConfigBlock struct {
+	Interface    string `yaml:"interface"`
+	IPAddress    string `yaml:"ip_address"`
+	StaticRoutes []struct {
+		DestNetwork string `yaml:"dest_network"`
+		SubnetMask  string `yaml:"subnet_mask"`
+		NextHop     string `yaml:"next_hop"`
+		Interface   string `yaml:"interface,omitempty"`
+	} `yaml:"static_routes"`
+	OSPFv3 *struct {
+		RouterID   string   `yaml:"router_id"`
+		Area       string   `yaml:"area"`
+		Networks   []string `yaml:"networks"`
+		Interfaces []struct {
+			Name    string `yaml:"name"`
+			Cost    int    `yaml:"cost"`
+			Passive bool   `yaml:"passive"`
+		} `yaml:"interfaces"`
+		Stub         interface{}      `yaml:"stub"`
+		NSSA         interface{}      `yaml:"nssa"`
+		Redistribute []Redistribution `yaml:"redistribute"`
+	} `yaml:"ospfv3"`
+	BGP *struct {
+		LocalAS      int              `yaml:"local_as"`
+		RouterID     string           `yaml:"router_id"`
+		RemoteAS     int              `yaml:"remote_as"`
+		Neighbor     string           `yaml:"neighbor"`
+		Networks     []string         `yaml:"networks,omitempty"`
+		Redistribute []Redistribution `yaml:"redistribute"`
+	} `yaml:"bgp"`
+}
+
+// UnmarshalYAML allows ConfigList to be unmarshaled from either a single mapping or a list.
+func (cl *ConfigList) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try unmarshaling as a list.
+	var list []*ConfigBlock
+	if err := unmarshal(&list); err == nil {
+		*cl = list
+		return nil
+	}
+	// Otherwise try unmarshaling as a single mapping.
+	var single ConfigBlock
+	if err := unmarshal(&single); err != nil {
+		return err
+	}
+	*cl = []*ConfigBlock{&single}
+	return nil
 }
 
 var gns3ConfigureCmd = &cobra.Command{
@@ -87,17 +96,36 @@ var gns3ConfigureCmd = &cobra.Command{
 		}
 
 		for _, router := range deployment.Routers {
-			if router.Config != nil && router.Config.Interface != "" && router.Config.IPAddress != "" {
-				pbData := PlaybookData{
-					RouterName:   router.Name,
-					IPConfigs:    []IPConfig{{Interface: router.Config.Interface, IPAddress: router.Config.IPAddress, Mask: "255.255.255.0", Secondary: true}},
-					StaticRoutes: []StaticRoute{},
-					OSPFv3:       nil,
-					BGP:          nil,
-				}
+			// Skip if no configuration blocks are provided.
+			if len(router.Config) == 0 {
+				continue
+			}
 
-				if router.Config.StaticRoutes != nil {
-					for _, sr := range router.Config.StaticRoutes {
+			pbData := PlaybookData{
+				RouterName:   router.Name,
+				IPConfigs:    []IPConfig{},
+				StaticRoutes: []StaticRoute{},
+				OSPFv3:       nil,
+				BGP:          nil,
+			}
+
+			// Iterate over each configuration block.
+			for _, cfg := range router.Config {
+				if cfg == nil || cfg.Interface == "" || cfg.IPAddress == "" {
+					continue
+				}
+				// Append IP configuration.
+				ipCfg := IPConfig{
+					Interface: cfg.Interface,
+					IPAddress: cfg.IPAddress,
+					Mask:      "255.255.255.0", // Alternatively, derive from cfg.IPAddress using cidrToMask.
+					Secondary: true,
+				}
+				pbData.IPConfigs = append(pbData.IPConfigs, ipCfg)
+
+				// Append static routes if available.
+				if cfg.StaticRoutes != nil {
+					for _, sr := range cfg.StaticRoutes {
 						pbData.StaticRoutes = append(pbData.StaticRoutes, StaticRoute{
 							DestNetwork: sr.DestNetwork,
 							SubnetMask:  sr.SubnetMask,
@@ -107,8 +135,9 @@ var gns3ConfigureCmd = &cobra.Command{
 					}
 				}
 
-				if router.Config.OSPFv3 != nil {
-					ospf := router.Config.OSPFv3
+				// Use the first available OSPFv3 config.
+				if pbData.OSPFv3 == nil && cfg.OSPFv3 != nil {
+					ospf := cfg.OSPFv3
 					var ospfIfaces []OSPFv3Interface
 					for _, iface := range ospf.Interfaces {
 						ospfIfaces = append(ospfIfaces, OSPFv3Interface{
@@ -159,8 +188,9 @@ var gns3ConfigureCmd = &cobra.Command{
 					}
 				}
 
-				if router.Config.BGP != nil {
-					bgp := router.Config.BGP
+				// Use the first available BGP config.
+				if pbData.BGP == nil && cfg.BGP != nil {
+					bgp := cfg.BGP
 					pbData.BGP = &BGPConfig{
 						LocalAS:      bgp.LocalAS,
 						RouterID:     bgp.RouterID,
@@ -170,45 +200,49 @@ var gns3ConfigureCmd = &cobra.Command{
 						Redistribute: bgp.Redistribute,
 					}
 				}
-
-				tempFile, err := ioutil.TempFile("", fmt.Sprintf("configure_%s-*.yml", router.Name))
-				if err != nil {
-					return fmt.Errorf("failed to create temp file for router %s: %v", router.Name, err)
-				}
-				defer os.Remove(tempFile.Name())
-
-				if err := tmpl.Execute(tempFile, pbData); err != nil {
-					return fmt.Errorf("failed to render playbook for router %s: %v", router.Name, err)
-				}
-				tempFile.Close()
-
-				// If verbose flag is enabled, print the rendered playbook.
-				if verbose {
-					rendered, err := ioutil.ReadFile(tempFile.Name())
-					if err != nil {
-						fmt.Printf("Warning: unable to read rendered playbook: %v\n", err)
-					} else {
-						fmt.Println("Rendered Playbook:")
-						fmt.Println(string(rendered))
-					}
-				}
-
-				// Build ansible-playbook command arguments.
-				args := []string{tempFile.Name(), "-i", inventoryFile}
-				if verbose {
-					args = append(args, "-vvv")
-				}
-				ansibleCmd := exec.Command("ansible-playbook", args...)
-				ansibleCmd.Env = os.Environ()
-
-				fmt.Printf("Executing ansible playbook for router %s with inventory '%s'...\n", router.Name, inventoryFile)
-				output, err := ansibleCmd.CombinedOutput()
-				fmt.Println(string(output))
-				if err != nil {
-					return fmt.Errorf("ansible-playbook execution failed for router %s: %v", router.Name, err)
-				}
-				fmt.Printf("Configuration applied successfully for router %s.\n", router.Name)
 			}
+
+			if len(pbData.IPConfigs) == 0 {
+				continue
+			}
+
+			tempFile, err := ioutil.TempFile("", fmt.Sprintf("configure_%s-*.yml", router.Name))
+			if err != nil {
+				return fmt.Errorf("failed to create temp file for router %s: %v", router.Name, err)
+			}
+			defer os.Remove(tempFile.Name())
+
+			if err := tmpl.Execute(tempFile, pbData); err != nil {
+				return fmt.Errorf("failed to render playbook for router %s: %v", router.Name, err)
+			}
+			tempFile.Close()
+
+			// If verbose flag is enabled, print the rendered playbook.
+			if verbose {
+				rendered, err := ioutil.ReadFile(tempFile.Name())
+				if err != nil {
+					fmt.Printf("Warning: unable to read rendered playbook: %v\n", err)
+				} else {
+					fmt.Println("Rendered Playbook:")
+					fmt.Println(string(rendered))
+				}
+			}
+
+			// Build ansible-playbook command arguments.
+			args := []string{tempFile.Name(), "-i", inventoryFile}
+			if verbose {
+				args = append(args, "-vvv")
+			}
+			ansibleCmd := exec.Command("ansible-playbook", args...)
+			ansibleCmd.Env = os.Environ()
+
+			fmt.Printf("Executing ansible playbook for router %s with inventory '%s'...\n", router.Name, inventoryFile)
+			output, err := ansibleCmd.CombinedOutput()
+			fmt.Println(string(output))
+			if err != nil {
+				return fmt.Errorf("ansible-playbook execution failed for router %s: %v", router.Name, err)
+			}
+			fmt.Printf("Configuration applied successfully for router %s.\n", router.Name)
 		}
 		return nil
 	},

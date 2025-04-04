@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -52,16 +54,61 @@ var gns3DeployYamlCmd = &cobra.Command{
 		}
 
 		// Apply Terraform
-		fmt.Println("🚀 Applying Terraform configuration...")
+		fmt.Println("🚀 Initializing Terraform configuration...")
 		runCommandInDir("terraform", []string{"init"}, "terraform/")
+		fmt.Println("🚀 Applying Terraform configuration...")
 		runCommandInDir("terraform", []string{"apply", "-auto-approve"}, "terraform/")
 
 		// Start nodes if the YAML flag is set
 		if topology.StartNodes {
 			fmt.Println("🔌 Starting all nodes...")
-			runCommandInDir("terraform", []string{"apply", "-auto-approve", "-target=gns3_start_all.start_nodes"}, "terraform/")
+			runCommandInDir("terraform", []string{"apply", "-auto-approve", "-target=gns3_start_all.start_nodes", "-compact-warnings"}, "terraform/")
 		}
+
+		// Fetch and format output as JSON
+		fmt.Println("🚀 Fetching and formatting Terraform outputs...")
+		err = formatAndSaveTerraformOutputs("terraform", "terraform/terraform.auto.tfvars.json")
+		if err != nil {
+			fmt.Println("❌ Error processing Terraform outputs:", err)
+			os.Exit(1)
+		}
+		fmt.Println("✅ Formatted Terraform outputs saved.")
 	},
+}
+
+// formatAndSaveTerraformOutputs fetches outputs from Terraform and formats them into the desired tfvars JSON structure.
+func formatAndSaveTerraformOutputs(workingDir, outputFile string) error {
+	cmd := exec.Command("terraform", "output", "-json")
+	cmd.Dir = workingDir
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("error fetching Terraform outputs: %w", err)
+	}
+
+	var outputs map[string]map[string]interface{}
+	if err := json.Unmarshal(output, &outputs); err != nil {
+		return fmt.Errorf("error decoding Terraform outputs: %w", err)
+	}
+
+	// Simplify the output to remove type information and just include value.
+	simplified := make(map[string]interface{})
+	for key, val := range outputs {
+		if v, ok := val["value"]; ok {
+			simplified[key] = v
+		}
+	}
+
+	// Save to file in a format that can be used as tfvars
+	formattedOutput, err := json.MarshalIndent(simplified, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshalling simplified outputs to tfvars format: %w", err)
+	}
+
+	if err := ioutil.WriteFile(outputFile, formattedOutput, 0644); err != nil {
+		return fmt.Errorf("error writing tfvars to file: %w", err)
+	}
+
+	return nil
 }
 
 func init() {
@@ -69,17 +116,15 @@ func init() {
 	rootCmd.AddCommand(gns3DeployYamlCmd)
 }
 
-// Function to visualize the YAML topology in ASCII format
+// visualizeTopology prints an ASCII visualization of the topology.
 func visualizeTopology(topology Topology) {
 	fmt.Println("\n📡 **Topology Visualization**")
 	fmt.Println("==================================")
-
 	// Print routers
 	fmt.Println("🖥️ Routers:")
 	for _, router := range topology.Routers {
 		fmt.Printf("🔹 [ %s ]\n", router.Name)
 	}
-
 	// Print switches
 	if len(topology.Switches) > 0 {
 		fmt.Println("\n🖧 Switches:")
@@ -87,7 +132,6 @@ func visualizeTopology(topology Topology) {
 			fmt.Printf("🟦 [ %s ]\n", sw.Name)
 		}
 	}
-
 	// Print clouds
 	if len(topology.Clouds) > 0 {
 		fmt.Println("\n☁️ Clouds:")
@@ -95,7 +139,6 @@ func visualizeTopology(topology Topology) {
 			fmt.Printf("🌥️ [ %s ]\n", cloud.Name)
 		}
 	}
-
 	// Print links
 	fmt.Println("\n🔗 Links:")
 	for _, link := range topology.Links {

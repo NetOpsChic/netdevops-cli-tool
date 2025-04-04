@@ -2,18 +2,33 @@ package cmd
 
 // Topology represents the complete network topology shared between CLI and YAML modes.
 type Topology struct {
-	Project    string   `yaml:"project"`
-	Routers    []Router `yaml:"routers"`
-	Switches   []Switch `yaml:"switches"`
-	Clouds     []Cloud  `yaml:"clouds"`
-	Links      []Link   `yaml:"links"`
-	StartNodes bool     `yaml:"start_nodes"`
+	Project          string            `yaml:"project"`
+	Routers          []Router          `yaml:"routers"`
+	Switches         []Switch          `yaml:"switches"`
+	Clouds           []Cloud           `yaml:"clouds"`
+	Links            []Link            `yaml:"links"`
+	StartNodes       bool              `yaml:"start_nodes"`
+	ZTPTemplate      string            `yaml:"-"`
+	ZTPServer        string            `yaml:"ztp_server"`
+	NetworkDevices   []NetworkDevice   `yaml:"network-device"`
+	TerraformVersion string            `yaml:"terraform_version"`
+	LinkIDs          map[string]string `yaml:"-"`
+}
+type NetworkDevice struct {
+	Name       string      `yaml:"name"`
+	Hostname   string      `yaml:"hostname"`
+	Vendor     string      `yaml:"vendor"`
+	MacAddress string      `yaml:"mac_address"`
+	Image      string      `yaml:"image"`  // formerly "template"
+	Config     interface{} `yaml:"config"` // or a more detailed type if needed
 }
 
 // Router defines a router device.
 type Router struct {
-	Name     string `yaml:"name"`
-	Template string `yaml:"template"`
+	Name     string     `yaml:"name"`
+	Vendor   string     `yaml:"vendor"` // Added to support YAML input (e.g., "arista")
+	Template string     `yaml:"template"`
+	Config   ConfigList `yaml:"config"`
 }
 
 // Switch defines a switch device.
@@ -39,12 +54,10 @@ type Link struct {
 }
 
 // CLILink is an alias for Link, used in CLI mode.
-// This ensures that CLI code can use the same structure as YAML mode without duplication.
 type CLILink = Link
 
 var (
 	// configFile holds the path to the deployment YAML file.
-	configFile string
 
 	// inventoryFile holds the path to the ansible inventory file.
 	inventoryFile string = "./ansible-inventory.yaml"
@@ -80,7 +93,7 @@ type OSPFv3Config struct {
 	Interfaces   []OSPFv3Interface
 	Stub         interface{}
 	NSSA         interface{}
-	Redistribute []Redistribution // Newly added
+	Redistribute []Redistribution
 }
 
 type PlaybookData struct {
@@ -88,7 +101,7 @@ type PlaybookData struct {
 	IPConfigs    []IPConfig
 	StaticRoutes []StaticRoute
 	OSPFv3       *OSPFv3Config
-	BGP          *BGPConfig // Newly added
+	BGP          *BGPConfig
 }
 
 // BGPConfig represents the BGP configuration.
@@ -101,7 +114,7 @@ type BGPConfig struct {
 	Redistribute []Redistribution
 }
 
-// Redistribution represents a redistribution rule in the user-friendly YAML.
+// Redistribution represents a redistribution rule.
 type Redistribution struct {
 	Protocol  string `yaml:"protocol"`
 	Metric    int    `yaml:"metric,omitempty"`
@@ -109,3 +122,14 @@ type Redistribution struct {
 	IsisLevel string `yaml:"isis_level,omitempty"` // Optional; if provided, passed to module
 	OspfRoute string `yaml:"ospf_route,omitempty"`
 }
+
+// Deployment represents the deployment configuration for CLI/YAML mode.
+type Deployment struct {
+	Project    string   `yaml:"project"`
+	StartNodes bool     `yaml:"start_nodes"`
+	ZTPServer  string   `yaml:"ztp-server"` // Added to read the ZTP server IP from YAML.
+	Routers    []Router `yaml:"routers"`
+}
+
+// ConfigList is a list of configuration blocks, supporting a single block or a list.
+type ConfigList []*ConfigBlock

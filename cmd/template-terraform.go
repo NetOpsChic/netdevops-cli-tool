@@ -4,7 +4,7 @@ const terraformTemplate = `terraform {
   required_providers {
     gns3 = {
       source  = "netopschic/gns3"
-      version = "~> 1.0"
+      version = "{{ .TerraformVersion }}"
     }
   }
 }
@@ -17,16 +17,19 @@ resource "gns3_project" "project1" {
   name = "{{ .Project }}"
 }
 
-# Routers
-{{ range .Routers }}
-resource "gns3_template" "{{ .Name }}" {
-  name        = "{{ .Name }}"
-  project_id  = gns3_project.project1.id
-  template_id = data.gns3_template_id.{{ .Name }}.id
-}
-
-data "gns3_template_id" "{{ .Name }}" {
-  name = "{{ .Template }}"
+# Network Devices (QEMU Nodes)
+{{ range .NetworkDevices }}
+resource "gns3_qemu_node" "{{ .Name }}" {
+  project_id     = gns3_project.project1.id
+  name           = "{{ .Name }}"
+  adapter_type   = "e1000"
+  adapters       = 10
+  hda_disk_image = "{{ .Image }}"
+  mac_address    = "{{ .MacAddress }}"
+  cpus           = 2
+  ram            = 2056
+  platform       = "x86_64"
+  start_vm       = true
 }
 {{ end }}
 
@@ -46,68 +49,89 @@ resource "gns3_cloud" "{{ .Name }}" {
 }
 {{ end }}
 
-# Links
+# Node ID Lookups (for output)
+{{ range .NetworkDevices }}
+data "gns3_node_id" "{{ .Name }}" {
+  project_id = gns3_project.project1.id
+  name       = "{{ .Name }}"
+  depends_on = [gns3_qemu_node.{{ .Name }}]
+}
+{{ end }}
+
+{{ range .Switches }}
+data "gns3_node_id" "{{ .Name }}" {
+  project_id = gns3_project.project1.id
+  name       = "{{ .Name }}"
+  depends_on = [gns3_switch.{{ .Name }}]
+}
+{{ end }}
+
+{{ range .Clouds }}
+data "gns3_node_id" "{{ .Name }}" {
+  project_id = gns3_project.project1.id
+  name       = "{{ .Name }}"
+  depends_on = [gns3_cloud.{{ .Name }}]
+}
+{{ end }}
+
+# Links between nodes
 {{ range .Links }}
 resource "gns3_link" "{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1).Name }}" {
   lifecycle {
     create_before_destroy = true
   }
-
   project_id = gns3_project.project1.id
-
-  node_a_id = lookup(
-    merge({
-      {{ range $.Routers }}
-      "{{ .Name }}" = gns3_template.{{ .Name }}.id,
-      {{ end }}
-      {{ range $.Switches }}
-      "{{ .Name }}" = gns3_switch.{{ .Name }}.id,
-      {{ end }}
-      {{ range $.Clouds }}
-      "{{ .Name }}" = gns3_cloud.{{ .Name }}.id
-      {{ end }}
-    }),
-    "{{ (index .Endpoints 0).Name }}",
-    ""
-  )
+  node_a_id      = data.gns3_node_id.{{ (index .Endpoints 0).Name }}.id
   node_a_adapter = {{ (index .Endpoints 0).Adapter }}
   node_a_port    = {{ (index .Endpoints 0).Port }}
-
-  node_b_id = lookup(
-    merge({
-      {{ range $.Routers }}
-      "{{ .Name }}" = gns3_template.{{ .Name }}.id,
-      {{ end }}
-      {{ range $.Switches }}
-      "{{ .Name }}" = gns3_switch.{{ .Name }}.id,
-      {{ end }}
-      {{ range $.Clouds }}
-      "{{ .Name }}" = gns3_cloud.{{ .Name }}.id
-      {{ end }}
-    }),
-    "{{ (index .Endpoints 1).Name }}",
-    ""
-  )
+  node_b_id      = data.gns3_node_id.{{ (index .Endpoints 1).Name }}.id
   node_b_adapter = {{ (index .Endpoints 1).Adapter }}
   node_b_port    = {{ (index .Endpoints 1).Port }}
 }
 {{ end }}
 
-# Start all nodes if --start flag is used
+# Optionally start all nodes if StartNodes is true
 {{ if .StartNodes }}
 resource "gns3_start_all" "start_nodes" {
   project_id = gns3_project.project1.id
-
   depends_on = [
-    {{ range $.Routers }} gns3_template.{{ .Name }},
+    {{ range .NetworkDevices }} gns3_qemu_node.{{ .Name }},
     {{ end }}
-    {{ range $.Switches }} gns3_switch.{{ .Name }},
+    {{ range .Switches }} gns3_switch.{{ .Name }},
     {{ end }}
-    {{ range $.Clouds }} gns3_cloud.{{ .Name }},
+    {{ range .Clouds }} gns3_cloud.{{ .Name }},
     {{ end }}
-    {{ range $.Links }} gns3_link.{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1).Name }},
+    {{ range .Links }} gns3_link.{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1).Name }},
     {{ end }}
   ]
 }
 {{ end }}
+
+# Output mapping of network device names to their QEMU node IDs.
+output "network_device_ids" {
+  description = "Mapping of network device names to QEMU node IDs"
+  value = {
+    {{- range .NetworkDevices }}
+    "{{ .Name }}" = data.gns3_node_id.{{ .Name }}.id,
+    {{- end }}
+  }
+}
+
+# Output project details.
+output "project_details" {
+  description = "Project name and ID"
+  value = {
+    "project_name" = gns3_project.project1.name,
+    "project_id"   = gns3_project.project1.id
+  }
+}
+
+output "link_ids" {
+  description = "Mapping of link names to their IDs"
+  value = {
+    {{- range .Links }}
+    "{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1).Name }}" = gns3_link.{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1).Name }}.id,
+    {{- end }}
+  }
+}
 `

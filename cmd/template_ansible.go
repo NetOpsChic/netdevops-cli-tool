@@ -4,12 +4,17 @@ package cmd
 // ConfigureAristaTemplate is an Ansible playbook template that configures
 // IPv4 interfaces, IPv4 static routes, and OSPFv3 routing (including redistribution)
 // using Arista EOS modules.
-const ConfigureAristaTemplate = `- hosts: all
+const ConfigureAristaTemplate = `- hosts: {{ .RouterName }}
   gather_facts: no
   connection: network_cli
 
   tasks:
-    - name: Configuring IPv4 on interfaces.
+    - name: Set device hostname
+      arista.eos.eos_config:
+        lines:
+          - hostname {{ .RouterName }}
+
+    - name: Configure IPv4 on interfaces
       arista.eos.eos_l3_interfaces:
         config:
 {{- range .IPConfigs }}
@@ -20,7 +25,7 @@ const ConfigureAristaTemplate = `- hosts: all
         state: merged
 
 {{- if .StaticRoutes }}
-    - name: Merging IPv4 static route configuration.
+    - name: Merge IPv4 static route configuration
       arista.eos.eos_static_routes:
         config:
 {{- range .StaticRoutes }}
@@ -39,7 +44,7 @@ const ConfigureAristaTemplate = `- hosts: all
 {{- end }}
 
 {{- if .OSPFv3 }}
-    - name: Configuring OSPFv3 routing process.
+    - name: Configure OSPFv3 routing process
       arista.eos.eos_ospfv3:
         config:
           processes:
@@ -74,8 +79,9 @@ const ConfigureAristaTemplate = `- hosts: all
                 - afi: "ipv6"
         state: merged
 {{- end }}
+
 {{- if .BGP }}
-    - name: Configuring BGP global settings.
+    - name: Configure BGP global settings
       arista.eos.eos_bgp_global:
         config:
           as_number: "{{ .BGP.LocalAS }}"
@@ -101,4 +107,7 @@ const ConfigureAristaTemplate = `- hosts: all
 {{- end }}
 {{- end }}
 {{- end }}
+    - name: Save configuration
+      arista.eos.eos_config:
+        save_when: changed
 `

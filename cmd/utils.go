@@ -48,70 +48,45 @@ func generateTerraformFile(filename, templateContent string, data interface{}) e
 	debugFile := "terraform/debug_template.txt"
 	mainFile := "terraform/main.tf"
 
-	// STEP 1: Save the raw template for debugging.
+	// Optional: Keep raw template saved for troubleshooting (no console print)
 	err := os.WriteFile(debugFile, []byte(templateContent), 0644)
 	if err != nil {
-		fmt.Println("🚨 ERROR: Could not write debug template file!", err)
-		return err
+		return fmt.Errorf("could not write debug template: %w", err)
 	}
 
-	// STEP 2: Print the raw template for debugging.
-	fmt.Println("\n🔎 === DEBUG: RAW TEMPLATE BEFORE PARSING ===")
-	lines := strings.Split(templateContent, "\n")
-	for i, line := range lines {
-		fmt.Printf("%d: %s\n", i+1, line)
-	}
-	fmt.Println("=======================================")
-
-	// STEP 3: Create (or truncate) the Terraform file.
+	// Create or truncate the main Terraform file
 	file, err := os.Create(mainFile)
 	if err != nil {
-		fmt.Println("🚨 ERROR: Could not create Terraform file!", err)
-		return err
+		return fmt.Errorf("could not create main Terraform file: %w", err)
 	}
 	defer file.Close()
 
-	// STEP 4: Register custom functions.
+	// Register custom template functions
 	funcMap := template.FuncMap{
 		"seq":      seq,
 		"multiply": multiply,
 		"mod":      mod,
+		"add":      func(a, b int) int { return a + b },
 	}
 
-	// STEP 5: Parse the template with the registered function map.
+	// Parse the template with functions
 	tmpl, err := template.New("terraform").Funcs(funcMap).Parse(templateContent)
 	if err != nil {
-		fmt.Println("\n❌ ERROR: TEMPLATE PARSING FAILED!")
-		fmt.Println("📌 Check terraform/debug_template.txt for errors")
-		fmt.Println("=======================================")
-		return err
+		return fmt.Errorf("template parsing failed (check debug_template.txt): %w", err)
 	}
 
-	// STEP 6: Execute the template into a buffer.
+	// Execute template into a buffer
 	var expandedTemplate strings.Builder
 	err = tmpl.Execute(&expandedTemplate, data)
 	if err != nil {
-		fmt.Println("\n❌ ERROR: TEMPLATE EXECUTION FAILED!")
-		fmt.Println("⚠️ DEBUG: Template Execution Error:", err)
-		fmt.Println("📌 Check terraform/debug_template.txt for errors")
-		fmt.Println("=======================================")
-		return err
+		return fmt.Errorf("template execution failed (check debug_template.txt): %w", err)
 	}
 
-	// STEP 7: Write the expanded template to the main Terraform file.
+	// Write final output to main Terraform file
 	err = os.WriteFile(mainFile, []byte(expandedTemplate.String()), 0644)
 	if err != nil {
-		fmt.Println("🚨 ERROR: Could not write Terraform file!", err)
-		return err
+		return fmt.Errorf("could not write final Terraform file: %w", err)
 	}
 
-	// STEP 8: Print the final generated Terraform file for debugging.
-	fmt.Println("\n✅ === DEBUG: FINAL GENERATED TERRAFORM FILE ===")
-	lines = strings.Split(expandedTemplate.String(), "\n")
-	for i, line := range lines {
-		fmt.Printf("%d: %s\n", i+1, line)
-	}
-	fmt.Println("=======================================")
-	fmt.Println("\n✅ SUCCESS: Terraform file written successfully!")
 	return nil
 }
