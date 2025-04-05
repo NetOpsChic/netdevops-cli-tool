@@ -13,6 +13,7 @@ type Topology struct {
 	NetworkDevices   []NetworkDevice   `yaml:"network-device"`
 	TerraformVersion string            `yaml:"terraform_version"`
 	LinkIDs          map[string]string `yaml:"-"`
+	NetworkDeviceIDs map[string]string
 }
 type NetworkDevice struct {
 	Name       string      `yaml:"name"`
@@ -21,6 +22,7 @@ type NetworkDevice struct {
 	MacAddress string      `yaml:"mac_address"`
 	Image      string      `yaml:"image"`  // formerly "template"
 	Config     interface{} `yaml:"config"` // or a more detailed type if needed
+	Port       int
 }
 
 // Router defines a router device.

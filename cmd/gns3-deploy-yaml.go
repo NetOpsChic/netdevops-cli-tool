@@ -62,7 +62,7 @@ var gns3DeployYamlCmd = &cobra.Command{
 		// Start nodes if the YAML flag is set
 		if topology.StartNodes {
 			fmt.Println("🔌 Starting all nodes...")
-			runCommandInDir("terraform", []string{"apply", "-auto-approve", "-target=gns3_start_all.start_nodes", "-compact-warnings"}, "terraform/")
+			runCommandInDir("terraform", []string{"apply", "-auto-approve", "-compact-warnings"}, "terraform/")
 		}
 
 		// Fetch and format output as JSON

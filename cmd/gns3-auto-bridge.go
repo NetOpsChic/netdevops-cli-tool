@@ -60,54 +60,24 @@ variable "network_device_ids" {
   type        = map(string)
   description = "Mapping of network device names to their QEMU node IDs as created by deploy‑yaml."
 }
+
 variable "link_ids" {
   type        = map(string)
   description = "Mapping of link resource names to their link UUIDs"
 }
 
-{{ range .NetworkDevices }}
-resource "gns3_qemu_node" "{{ .Name }}" {
-  project_id     = gns3_project.project1.id
-  name           = "{{ .Name }}"
-  adapter_type   = "e1000"
-  adapters       = 10
-  console_type   = "telnet"
-  cpus           = 2
-  hda_disk_image = "/path/to/disk/image"
-  mac_address    = "{{ .MacAddress }}"
-  ram            = 2048
-  start_vm       = true
+# 🧱 Dummy declarations to prevent resource destruction
+{{ range $name, $id := .NetworkDeviceIDs }}
+resource "gns3_qemu_node" "{{ $name }}" {
+  name       = "{{ $name }}"
+  project_id = gns3_project.project1.id
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 {{ end }}
 
-resource "gns3_link" "ZTP_to_switch" {
-  project_id     = gns3_project.project1.id
-  node_a_id      = gns3_template.ztp.id
-  node_a_adapter = 0
-  node_a_port    = 0
-  node_b_id      = gns3_switch.mgmt_switch.id
-  node_b_adapter = 0
-  node_b_port    = 1
-}
-
-resource "gns3_link" "Cloud_to_switch" {
-  project_id     = gns3_project.project1.id
-  node_a_id      = gns3_cloud.cloud.id
-  node_a_adapter = 0
-  node_a_port    = 0
-  node_b_id      = gns3_switch.mgmt_switch.id
-  node_b_adapter = 0
-  node_b_port    = 2
-}
-
-resource "gns3_start_all" "start_nodes" {
-  project_id = gns3_project.project1.id
-  depends_on = [
-    gns3_template.ztp,
-    gns3_switch.mgmt_switch,
-    gns3_cloud.cloud
-  ]
-}
 {{ range $name, $id := .LinkIDs }}
 resource "gns3_link" "{{ $name }}" {
   project_id     = gns3_project.project1.id
@@ -124,7 +94,75 @@ resource "gns3_link" "{{ $name }}" {
 }
 {{ end }}
 
+# Hardcoded management links for ZTP and Cloud
+resource "gns3_link" "ZTP_to_switch" {
+  project_id     = gns3_project.project1.id
+  node_a_id      = gns3_template.ztp.id
+  node_a_adapter = 0
+  node_a_port    = 0
+  node_b_id      = gns3_switch.mgmt_switch.id
+  node_b_adapter = 0
+  node_b_port    = 1
 
+  depends_on = [gns3_template.ztp, gns3_switch.mgmt_switch]
+}
+
+resource "gns3_link" "Cloud_to_switch" {
+  project_id     = gns3_project.project1.id
+  node_a_id      = gns3_cloud.cloud.id
+  node_a_adapter = 0
+  node_a_port    = 0
+  node_b_id      = gns3_switch.mgmt_switch.id
+  node_b_adapter = 0
+  node_b_port    = 2
+
+  depends_on = [gns3_cloud.cloud, gns3_switch.mgmt_switch]
+}
+
+# Start all nodes if needed
+resource "gns3_start_all" "start_nodes" {
+  project_id = gns3_project.project1.id
+  depends_on = [
+    gns3_template.ztp,
+    gns3_switch.mgmt_switch,
+    gns3_cloud.cloud
+  ]
+}
+
+# 🔌 Smart switch-to-router link generation
+{{ $linkIDs := .LinkIDs }}
+{{ range .NetworkDevices }}
+{{ $linkName := printf "%s_to_switch" .Name }}
+{{ if index $linkIDs $linkName }}
+# 🔒 Dummy (imported) link for {{ $linkName }}
+resource "gns3_link" "{{ $linkName }}" {
+  project_id     = gns3_project.project1.id
+  node_a_id      = "dummy-node-a"
+  node_a_adapter = 0
+  node_a_port    = 0
+  node_b_id      = "dummy-node-b"
+  node_b_adapter = 0
+  node_b_port    = 0
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+{{ else }}
+# ✅ Real link for {{ .Name }} <-> mgmt-switch
+resource "gns3_link" "{{ $linkName }}" {
+  project_id     = gns3_project.project1.id
+  node_a_id      = var.network_device_ids["{{ .Name }}"]
+  node_a_adapter = 0
+  node_a_port    = 0
+  node_b_id      = gns3_switch.mgmt_switch.id
+  node_b_adapter = 0
+  node_b_port    = {{ .Port }}
+
+  depends_on = [gns3_switch.mgmt_switch]
+}
+{{ end }}
+{{ end }}
 
 `
 
@@ -181,7 +219,7 @@ var gns3AutoBridgeCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// 🔥 Parse tfvars and inject LinkIDs into topology
+		// 🔥 Parse tfvars and inject LinkIDs + NetworkDeviceIDs into topology
 		tfvarsContent, err := ioutil.ReadFile(tfvarsPath)
 		if err != nil {
 			fmt.Println("❌ Error reading tfvars:", err)
@@ -189,13 +227,20 @@ var gns3AutoBridgeCmd = &cobra.Command{
 		}
 
 		var parsedTfvars struct {
-			LinkIDs map[string]string `json:"link_ids"`
+			LinkIDs          map[string]string `json:"link_ids"`
+			NetworkDeviceIDs map[string]string `json:"network_device_ids"`
+			ProjectDetails   struct {
+				ProjectID string `json:"project_id"`
+			} `json:"project_details"`
 		}
+
 		if err := json.Unmarshal(tfvarsContent, &parsedTfvars); err != nil {
 			fmt.Println("❌ Error parsing tfvars JSON:", err)
 			os.Exit(1)
 		}
+
 		topology.LinkIDs = parsedTfvars.LinkIDs
+		topology.NetworkDeviceIDs = parsedTfvars.NetworkDeviceIDs
 
 		// ✅ Now generate the Terraform file with LinkIDs injected
 		if err := generateTerraformFile("terraform/main.tf", autoBridgeTerraformTemplate, topology); err != nil {
@@ -208,7 +253,7 @@ var gns3AutoBridgeCmd = &cobra.Command{
 
 		if topology.StartNodes {
 			fmt.Println("🚀 Applying Terraform configuration (targeted for ZTP + start_all)...")
-			runCommandInDir("terraform", []string{"apply", "-auto-approve", "-target=gns3_template.ztp", "-target=gns3_start_all.start_nodes", "-compact-warnings"}, "terraform")
+			runCommandInDir("terraform", []string{"apply", "-auto-approve", "-compact-warnings"}, "terraform")
 		} else {
 			fmt.Println("🚀 Applying full Terraform configuration...")
 			runCommandInDir("terraform", []string{"apply", "-auto-approve"}, "terraform")
@@ -245,7 +290,7 @@ func init() {
 func generateAutoBridgeTopology(simple Topology) Topology {
 	topology := Topology{
 		Project:          simple.Project,
-		NetworkDevices:   simple.NetworkDevices,
+		NetworkDevices:   simple.NetworkDevices, // already there
 		StartNodes:       simple.StartNodes,
 		ZTPTemplate:      simple.ZTPTemplate,
 		Links:            simple.Links,
@@ -253,9 +298,11 @@ func generateAutoBridgeTopology(simple Topology) Topology {
 		TerraformVersion: simple.TerraformVersion,
 	}
 
+	// Add extra cloud and switch for management
 	topology.Clouds = append(topology.Clouds, Cloud{Name: "Auto-Cloud"})
 	topology.Switches = append(topology.Switches, Switch{Name: "Auto-Switch"})
 
+	// Link: ZTP -> Auto-Switch
 	topology.Links = append(topology.Links, Link{
 		Endpoints: []Endpoint{
 			{Name: "ZTP", Adapter: 0, Port: 0},
@@ -263,6 +310,7 @@ func generateAutoBridgeTopology(simple Topology) Topology {
 		},
 	})
 
+	// Link: Cloud -> Auto-Switch
 	topology.Links = append(topology.Links, Link{
 		Endpoints: []Endpoint{
 			{Name: "Auto-Cloud", Adapter: 0, Port: 0},
@@ -270,14 +318,11 @@ func generateAutoBridgeTopology(simple Topology) Topology {
 		},
 	})
 
-	port := 100
-	for _, nd := range simple.NetworkDevices {
-		topology.Links = append(topology.Links, Link{
-			Endpoints: []Endpoint{
-				{Name: nd.Name, Adapter: 0, Port: 0},
-				{Name: "Auto-Switch", Adapter: 0, Port: port},
-			},
-		})
+	// 🔌 Link each network device to Auto-Switch starting from port 100
+	port := 3
+	// Instead of appending, just assign Port for each device.
+	for i := range topology.NetworkDevices {
+		topology.NetworkDevices[i].Port = port
 		port++
 	}
 
