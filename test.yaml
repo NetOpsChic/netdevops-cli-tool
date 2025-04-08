@@ -1,7 +1,7 @@
 terraform_version: "2.4.0"
-project: "ztp1"
+project: "ztp-test0"
 start_nodes: true
-ztp_server: 192.168.100.2
+ztp_server: 192.168.100.3
 
 network-device:
   - name: "R1"

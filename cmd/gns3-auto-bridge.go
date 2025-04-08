@@ -39,11 +39,13 @@ data "gns3_template_id" "ztp" {
   name = "{{ .ZTPTemplate }}"
 }
 
+# ✅ Template now depends on all QEMU nodes so it's deleted last
 resource "gns3_template" "ztp" {
   name        = "{{ .ZTPTemplate }}"
   project_id  = gns3_project.project1.id
   template_id = data.gns3_template_id.ztp.template_id
   start       = true
+
 }
 
 resource "gns3_cloud" "cloud" {
@@ -66,7 +68,7 @@ variable "link_ids" {
   description = "Mapping of link resource names to their link UUIDs"
 }
 
-# 🧱 Dummy declarations to prevent resource destruction
+# 🧱 Dummy declarations to retain existing QEMU nodes
 {{ range $name, $id := .NetworkDeviceIDs }}
 resource "gns3_qemu_node" "{{ $name }}" {
   name       = "{{ $name }}"
@@ -78,6 +80,7 @@ resource "gns3_qemu_node" "{{ $name }}" {
 }
 {{ end }}
 
+# 🧱 Dummy link declarations to avoid destruction of existing links
 {{ range $name, $id := .LinkIDs }}
 resource "gns3_link" "{{ $name }}" {
   project_id     = gns3_project.project1.id
@@ -94,7 +97,7 @@ resource "gns3_link" "{{ $name }}" {
 }
 {{ end }}
 
-# Hardcoded management links for ZTP and Cloud
+# 🔗 Management Links
 resource "gns3_link" "ZTP_to_switch" {
   project_id     = gns3_project.project1.id
   node_a_id      = gns3_template.ztp.id
@@ -119,7 +122,7 @@ resource "gns3_link" "Cloud_to_switch" {
   depends_on = [gns3_cloud.cloud, gns3_switch.mgmt_switch]
 }
 
-# Start all nodes if needed
+# 🔁 Start all
 resource "gns3_start_all" "start_nodes" {
   project_id = gns3_project.project1.id
   depends_on = [
@@ -163,7 +166,6 @@ resource "gns3_link" "{{ $linkName }}" {
 }
 {{ end }}
 {{ end }}
-
 `
 
 var (
@@ -282,7 +284,7 @@ var gns3AutoBridgeCmd = &cobra.Command{
 
 func init() {
 	gns3AutoBridgeCmd.Flags().StringVarP(&autoBridgeConfigFile, "config", "c", "topology.yaml", "YAML topology file")
-	gns3AutoBridgeCmd.Flags().StringVarP(&ztpTemplateName, "ztp-template", "z", "ztp-server", "Name of the ZTP template to use")
+	gns3AutoBridgeCmd.Flags().StringVarP(&ztpTemplateName, "ztp-template", "z", "ztp", "Name of the ZTP template to use")
 	gns3AutoBridgeCmd.Flags().StringVarP(&deployStateDir, "deploy-state-dir", "d", "terraform-deploy", "Directory containing the deploy‑yaml Terraform state")
 	rootCmd.AddCommand(gns3AutoBridgeCmd)
 }

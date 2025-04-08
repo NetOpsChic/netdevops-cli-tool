@@ -21,7 +21,7 @@ In NetDevOps CLI, the YAML file acts as the single source of truth for defining 
 ## Features
 
 > Under the hood, **NetDevOps CLI** wraps an actual Terraform provider — yes, one I built from scratch:  
-> [terraform-provider-gns3](https://github.com/NetOpsChic/terraform-provider-gns3).  
+> [terraform-provider-gns3](https://github.com/NetOpsChic/terraform-provider-gns3) 
 >  
 > So if you ever thought, *“Hey, wouldn’t it be cool if Terraform could speak fluent GNS3?”* — well, now it does.  
 >  
@@ -95,9 +95,7 @@ Tears down the Terraform-managed GNS3 project and deletes all associated resourc
 ### Generate Dynamic Ansible Inventory (from ZTP Server)
 
 ```bash
-./netdevops gns3-inventory \
-  --ztp 192.168.100.2:5000 \
-  --vendor arista
+./netdevops gns3-inventory -c test.yaml
 ```
 
 Queries the ZTP server for MAC-to-IP assignments and builds an Ansible inventory with proper `ansible_network_os` for each device.
@@ -129,9 +127,7 @@ The ZTP workflow is powered by a lightweight Docker-based ZTP server, which hand
 
 
 ```bash
-./netdevops gns3-auto-bridge \
-  -c test.yaml \
-  -z ztp-server
+./netdevops gns3-auto-bridge -c test.yaml
 ```
 
 Automatically:

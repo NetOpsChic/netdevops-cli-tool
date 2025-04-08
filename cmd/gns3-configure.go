@@ -18,7 +18,6 @@ import (
 
 var verbose bool
 
-// ConfigBlock represents a single configuration block for a router.
 type ConfigBlock struct {
 	Interface    string `yaml:"interface"`
 	IPAddress    string `yaml:"ip_address"`
@@ -51,15 +50,12 @@ type ConfigBlock struct {
 	} `yaml:"bgp"`
 }
 
-// UnmarshalYAML allows ConfigList to be unmarshaled from either a single mapping or a list.
 func (cl *ConfigList) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// Try unmarshaling as a list.
 	var list []*ConfigBlock
 	if err := unmarshal(&list); err == nil {
 		*cl = list
 		return nil
 	}
-	// Otherwise try unmarshaling as a single mapping.
 	var single ConfigBlock
 	if err := unmarshal(&single); err != nil {
 		return err
@@ -72,6 +68,8 @@ var gns3ConfigureCmd = &cobra.Command{
 	Use:   "gns3-configure",
 	Short: "Render and execute Ansible playbooks for device configuration based on a deployment YAML",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("🚀 gns3-configure triggered")
+
 		if configFile == "" {
 			return fmt.Errorf("deployment YAML file must be provided using the --config flag")
 		}
@@ -81,10 +79,15 @@ var gns3ConfigureCmd = &cobra.Command{
 			return fmt.Errorf("failed to read deployment file: %v", err)
 		}
 
-		var deployment Deployment
+		// Modified to read from `network-device` instead of `routers`
+		var deployment struct {
+			NetworkDevices []Router `yaml:"network-device"`
+		}
 		if err := yaml.Unmarshal(data, &deployment); err != nil {
 			return fmt.Errorf("failed to parse deployment YAML: %v", err)
 		}
+
+		fmt.Printf("🔍 Found %d network devices in deployment\n", len(deployment.NetworkDevices))
 
 		tmpl, err := template.New("playbook").Funcs(sprig.TxtFuncMap()).Funcs(template.FuncMap{
 			"maskToPrefix":      maskToPrefix,
@@ -95,9 +98,9 @@ var gns3ConfigureCmd = &cobra.Command{
 			return fmt.Errorf("failed to parse ansible playbook template: %v", err)
 		}
 
-		for _, router := range deployment.Routers {
-			// Skip if no configuration blocks are provided.
+		for _, router := range deployment.NetworkDevices {
 			if len(router.Config) == 0 {
+				fmt.Printf("⚠️  Skipping router %s: no config block found\n", router.Name)
 				continue
 			}
 
@@ -109,21 +112,18 @@ var gns3ConfigureCmd = &cobra.Command{
 				BGP:          nil,
 			}
 
-			// Iterate over each configuration block.
 			for _, cfg := range router.Config {
 				if cfg == nil || cfg.Interface == "" || cfg.IPAddress == "" {
 					continue
 				}
-				// Append IP configuration.
 				ipCfg := IPConfig{
 					Interface: cfg.Interface,
 					IPAddress: cfg.IPAddress,
-					Mask:      "255.255.255.0", // Alternatively, derive from cfg.IPAddress using cidrToMask.
+					Mask:      "255.255.255.0",
 					Secondary: true,
 				}
 				pbData.IPConfigs = append(pbData.IPConfigs, ipCfg)
 
-				// Append static routes if available.
 				if cfg.StaticRoutes != nil {
 					for _, sr := range cfg.StaticRoutes {
 						pbData.StaticRoutes = append(pbData.StaticRoutes, StaticRoute{
@@ -135,7 +135,6 @@ var gns3ConfigureCmd = &cobra.Command{
 					}
 				}
 
-				// Use the first available OSPFv3 config.
 				if pbData.OSPFv3 == nil && cfg.OSPFv3 != nil {
 					ospf := cfg.OSPFv3
 					var ospfIfaces []OSPFv3Interface
@@ -148,33 +147,31 @@ var gns3ConfigureCmd = &cobra.Command{
 					}
 					var stubVal interface{}
 					if ospf.Stub != nil {
-						if v, ok := ospf.Stub.(bool); ok {
+						switch v := ospf.Stub.(type) {
+						case bool:
 							if v {
 								stubVal = map[string]interface{}{}
-							} else {
-								stubVal = nil
 							}
-						} else if m, ok := ospf.Stub.(map[interface{}]interface{}); ok {
-							stubVal = convertMap(m)
-						} else if m, ok := ospf.Stub.(map[string]interface{}); ok {
-							stubVal = m
+						case map[interface{}]interface{}:
+							stubVal = convertMap(v)
+						case map[string]interface{}:
+							stubVal = v
 						}
 					}
 					var nssaVal interface{}
 					if ospf.NSSA != nil {
-						if v, ok := ospf.NSSA.(bool); ok {
+						switch v := ospf.NSSA.(type) {
+						case bool:
 							if v {
 								nssaVal = map[string]interface{}{
 									"default_information_originate": true,
 									"no_summary":                    false,
 								}
-							} else {
-								nssaVal = nil
 							}
-						} else if m, ok := ospf.NSSA.(map[interface{}]interface{}); ok {
-							nssaVal = convertMap(m)
-						} else if m, ok := ospf.NSSA.(map[string]interface{}); ok {
-							nssaVal = m
+						case map[interface{}]interface{}:
+							nssaVal = convertMap(v)
+						case map[string]interface{}:
+							nssaVal = v
 						}
 					}
 					pbData.OSPFv3 = &OSPFv3Config{
@@ -188,7 +185,6 @@ var gns3ConfigureCmd = &cobra.Command{
 					}
 				}
 
-				// Use the first available BGP config.
 				if pbData.BGP == nil && cfg.BGP != nil {
 					bgp := cfg.BGP
 					pbData.BGP = &BGPConfig{
@@ -203,6 +199,7 @@ var gns3ConfigureCmd = &cobra.Command{
 			}
 
 			if len(pbData.IPConfigs) == 0 {
+				fmt.Printf("⚠️  Skipping router %s: no usable IP configuration\n", router.Name)
 				continue
 			}
 
@@ -217,18 +214,13 @@ var gns3ConfigureCmd = &cobra.Command{
 			}
 			tempFile.Close()
 
-			// If verbose flag is enabled, print the rendered playbook.
 			if verbose {
 				rendered, err := ioutil.ReadFile(tempFile.Name())
-				if err != nil {
-					fmt.Printf("Warning: unable to read rendered playbook: %v\n", err)
-				} else {
-					fmt.Println("Rendered Playbook:")
-					fmt.Println(string(rendered))
+				if err == nil {
+					fmt.Println("📄 Rendered Playbook:\n" + string(rendered))
 				}
 			}
 
-			// Build ansible-playbook command arguments.
 			args := []string{tempFile.Name(), "-i", inventoryFile}
 			if verbose {
 				args = append(args, "-vvv")
@@ -236,13 +228,13 @@ var gns3ConfigureCmd = &cobra.Command{
 			ansibleCmd := exec.Command("ansible-playbook", args...)
 			ansibleCmd.Env = os.Environ()
 
-			fmt.Printf("Executing ansible playbook for router %s with inventory '%s'...\n", router.Name, inventoryFile)
+			fmt.Printf("▶️  Executing playbook for %s using inventory '%s'...\n", router.Name, inventoryFile)
 			output, err := ansibleCmd.CombinedOutput()
 			fmt.Println(string(output))
 			if err != nil {
-				return fmt.Errorf("ansible-playbook execution failed for router %s: %v", router.Name, err)
+				return fmt.Errorf("❌ Playbook failed for router %s: %v", router.Name, err)
 			}
-			fmt.Printf("Configuration applied successfully for router %s.\n", router.Name)
+			fmt.Printf("✅ Configuration applied successfully for %s.\n", router.Name)
 		}
 		return nil
 	},
@@ -252,7 +244,7 @@ func init() {
 	rootCmd.AddCommand(gns3ConfigureCmd)
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 	gns3ConfigureCmd.Flags().StringVarP(&configFile, "config", "c", "", "Deployment YAML file containing topology and device configuration")
-	gns3ConfigureCmd.Flags().StringVar(&inventoryFile, "inventory", "./ansible-inventory.yaml", "Ansible inventory file path (default is ./ansible-inventory.yaml)")
+	gns3ConfigureCmd.Flags().StringVar(&inventoryFile, "inventory", "./ansible-inventory.yaml", "Ansible inventory file path")
 }
 
 func convertMap(in map[interface{}]interface{}) map[string]interface{} {

@@ -58,13 +58,6 @@ type Link struct {
 // CLILink is an alias for Link, used in CLI mode.
 type CLILink = Link
 
-var (
-	// configFile holds the path to the deployment YAML file.
-
-	// inventoryFile holds the path to the ansible inventory file.
-	inventoryFile string = "./ansible-inventory.yaml"
-)
-
 // IPConfig represents a single interface IP configuration.
 type IPConfig struct {
 	Interface string
@@ -125,13 +118,13 @@ type Redistribution struct {
 	OspfRoute string `yaml:"ospf_route,omitempty"`
 }
 
-// Deployment represents the deployment configuration for CLI/YAML mode.
-type Deployment struct {
-	Project    string   `yaml:"project"`
-	StartNodes bool     `yaml:"start_nodes"`
-	ZTPServer  string   `yaml:"ztp-server"` // Added to read the ZTP server IP from YAML.
-	Routers    []Router `yaml:"routers"`
-}
-
 // ConfigList is a list of configuration blocks, supporting a single block or a list.
 type ConfigList []*ConfigBlock
+
+// Deployment holds the deployment configuration from YAML.
+type Deployment struct {
+	Project   string   `yaml:"project"`
+	ZTPServer string   `yaml:"ztp_server"`
+	Vendor    string   `yaml:"vendor"`
+	Routers   []Router `yaml:"routers"`
+}
