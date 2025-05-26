@@ -300,6 +300,13 @@ Tears down the Terraform-managed GNS3 project and deletes all associated resourc
 The --clean-up-all flags deletes the directory assosicated with the project.
 
 ---
+### Whats comming ?
+
+Drumroll, please! (Yes, we’re being dramatic…)
+
+The whole purpose behind introducing reconciliation was to make the YAML file the single source of truth for the entire topology. This means everything is now driven from one place, making it easy to manage, version control in Git, and push this tool even closer to true NetDevOps and GitOps workflows.
+
+Next up: adding a discovery command to deploy a digital twin of your network—making automated network modeling as easy as a single command!
 
 ## Contributing
 
