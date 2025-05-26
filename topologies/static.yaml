@@ -1,5 +1,5 @@
 terraform_version: "2.4.0"
-project: "ztp-test0"
+project: "ztp-test1"
 start_nodes: true
 ztp_server: 192.168.100.3
 
@@ -11,11 +11,17 @@ network-device:
     image: "/home/netopschic/Templates/veos-4.29.2F/hda.qcow2"
     config:
       interface: "Ethernet1"
-      ip_address: "10.0.12.1/30"
+      ip_address: "10.1.12.1/30"
       static_routes:
         - dest_network: "10.1.1.2"
           subnet_mask: "255.255.255.255"
-          next_hop: "10.0.12.2"
+          next_hop: "10.1.12.2"
+        - dest_network: "10.1.1.3"
+          subnet_mask: "255.255.255.255"
+          next_hop: "10.1.12.2"
+        - dest_network: "10.1.20.0"
+          subnet_mask: "255.255.255.252"
+          next_hop: "10.1.12.2"
 
   - name: "R2"
     hostname: "R2"
@@ -24,30 +30,35 @@ network-device:
     image: "/home/netopschic/Templates/veos-4.29.2F/hda.qcow2"
     config:
       - interface: "Ethernet1"
-        ip_address: "10.0.12.2/30"
+        ip_address: "10.1.12.2/30"
+      - interface: "Ethernet2"
+        ip_address: "10.1.20.1/30"
         static_routes:
           - dest_network: "10.1.1.1"
             subnet_mask: "255.255.255.255"
-            next_hop: "10.0.12.1"
-      - interface: "Ethernet2"
-        ip_address: "10.0.20.1/30"
-        static_routes:
+            next_hop: "10.1.12.1"
           - dest_network: "10.1.1.3"
             subnet_mask: "255.255.255.255"
-            next_hop: "10.0.20.2"
+            next_hop: "10.1.20.2"
 
   - name: "R3"
     hostname: "R3"
+    vendor: "arista"
     mac_address: "00:1c:73:aa:bc:03"
     image: "/home/netopschic/Templates/veos-4.29.2F/hda.qcow2"
-    vendor: "arista"
     config:
       interface: "Ethernet1"
-      ip_address: "10.0.20.2/30"
+      ip_address: "10.1.20.2/30"
       static_routes:
+        - dest_network: "10.1.1.1"
+          subnet_mask: "255.255.255.255"
+          next_hop: "10.1.20.1"
         - dest_network: "10.1.1.2"
           subnet_mask: "255.255.255.255"
-          next_hop: "10.0.20.1"
+          next_hop: "10.1.20.1"
+        - dest_network: "10.1.12.0"
+          subnet_mask: "255.255.255.252"
+          next_hop: "10.1.20.1"
 
 links:
   - endpoints:

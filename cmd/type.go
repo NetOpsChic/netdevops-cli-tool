@@ -1,28 +1,66 @@
 package cmd
 
+import (
+	"fmt"
+	"strings"
+	"time"
+)
+
 // Topology represents the complete network topology shared between CLI and YAML modes.
 type Topology struct {
-	Project          string            `yaml:"project"`
-	Routers          []Router          `yaml:"routers"`
-	Switches         []Switch          `yaml:"switches"`
-	Clouds           []Cloud           `yaml:"clouds"`
-	Links            []Link            `yaml:"links"`
-	StartNodes       bool              `yaml:"start_nodes"`
-	ZTPTemplate      string            `yaml:"-"`
-	ZTPServer        string            `yaml:"ztp_server"`
-	NetworkDevices   []NetworkDevice   `yaml:"network-device"`
-	TerraformVersion string            `yaml:"terraform_version"`
+	Project struct {
+		Name             string `yaml:"name"`
+		StartNodes       bool   `yaml:"start_nodes"`
+		GNS3Server       string `yaml:"gns3_server"`
+		TerraformVersion string `yaml:"terraform_version"`
+	} `yaml:"project"`
+
+	NetworkDevice struct {
+		Routers []NetworkDevice `yaml:"routers"`
+	} `yaml:"network-device"`
+
+	Switches  []Switch      `yaml:"switches"`
+	Clouds    []Cloud       `yaml:"clouds"`
+	Templates TemplateGroup `yaml:"templates"`
+	Links     []Link        `yaml:"links"`
+
+	ZTPServer        string            `yaml:"-"` // Extracted from ztp-server in templates
 	LinkIDs          map[string]string `yaml:"-"`
-	NetworkDeviceIDs map[string]string
+	NetworkDeviceIDs map[string]string `yaml:"-"`
 }
+
+func (cl *ConfigList) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var list []*ConfigBlock
+	if err := unmarshal(&list); err == nil {
+		*cl = list
+		return nil
+	}
+	var single ConfigBlock
+	if err := unmarshal(&single); err != nil {
+		return err
+	}
+	*cl = []*ConfigBlock{&single}
+	return nil
+}
+
 type NetworkDevice struct {
 	Name       string      `yaml:"name"`
 	Hostname   string      `yaml:"hostname"`
 	Vendor     string      `yaml:"vendor"`
 	MacAddress string      `yaml:"mac_address"`
-	Image      string      `yaml:"image"`  // formerly "template"
-	Config     interface{} `yaml:"config"` // or a more detailed type if needed
-	Port       int
+	Image      string      `yaml:"image"`
+	Config     interface{} `yaml:"config"`
+	Port       int         `yaml:"-"`
+}
+
+type TemplateGroup struct {
+	Servers []TemplateServer `yaml:"servers"`
+}
+
+type TemplateServer struct {
+	Name      string `yaml:"name"`
+	Start     bool   `yaml:"start"`
+	ZTPServer string `yaml:"ztp_server,omitempty"` // Only applicable to ztp-server
 }
 
 // Router defines a router device.
@@ -75,17 +113,17 @@ type StaticRoute struct {
 }
 
 // OSPFv3Interface represents OSPFv3 settings for a given interface.
-type OSPFv3Interface struct {
+type OSPFInterface struct {
 	Name    string
 	Cost    int
 	Passive bool
 }
 
-type OSPFv3Config struct {
+type OSPFConfig struct {
 	RouterID     string
 	Area         string
 	Networks     []string
-	Interfaces   []OSPFv3Interface
+	Interfaces   []OSPFInterface
 	Stub         interface{}
 	NSSA         interface{}
 	Redistribute []Redistribution
@@ -95,7 +133,7 @@ type PlaybookData struct {
 	RouterName   string
 	IPConfigs    []IPConfig
 	StaticRoutes []StaticRoute
-	OSPFv3       *OSPFv3Config
+	OSPF         *OSPFConfig
 	BGP          *BGPConfig
 }
 
@@ -123,8 +161,164 @@ type ConfigList []*ConfigBlock
 
 // Deployment holds the deployment configuration from YAML.
 type Deployment struct {
-	Project   string   `yaml:"project"`
-	ZTPServer string   `yaml:"ztp_server"`
-	Vendor    string   `yaml:"vendor"`
-	Routers   []Router `yaml:"routers"`
+	Project struct {
+		Name             string `yaml:"name"`
+		StartNodes       bool   `yaml:"start_nodes"`
+		TerraformVersion string `yaml:"terraform_version"`
+	} `yaml:"project"`
+
+	Templates struct {
+		Servers []struct {
+			Name      string `yaml:"name"`
+			Start     bool   `yaml:"start"`
+			ZTPServer string `yaml:"ztp_server,omitempty"`
+		} `yaml:"servers"`
+	} `yaml:"templates"`
+
+	NetworkDevice struct {
+		Routers []struct {
+			Name       string      `yaml:"name"`
+			Hostname   string      `yaml:"hostname"`
+			Vendor     string      `yaml:"vendor"`
+			MacAddress string      `yaml:"mac_address"`
+			Image      string      `yaml:"image"`
+			Config     interface{} `yaml:"config"`
+		} `yaml:"routers"`
+	} `yaml:"network-device"`
+}
+
+type DeviceConfig struct {
+	Name       string     `yaml:"name"`
+	Hostname   string     `yaml:"hostname"`
+	Vendor     string     `yaml:"vendor"`
+	MACAddress string     `yaml:"mac_address"`
+	Image      string     `yaml:"image"`
+	Config     ConfigList `yaml:"config"`
+}
+type ZTPDevice struct {
+	Name            string `json:"name"`
+	IP              string `json:"ip"`
+	AnsibleUser     string `json:"ansible_user"`
+	AnsiblePassword string `json:"ansible_password"`
+}
+
+var (
+	projectID     string
+	containerID   string
+	ztpIP         string
+	skipZTP       bool
+	manualDevices []string
+	vendor        string
+	configFile    string
+	inventoryFile string = "ansible-inventory/inventory.yaml"
+)
+
+const (
+	colorRed    = "\x1b[31m"
+	colorYellow = "\x1b[33m"
+	colorCyan   = "\x1b[36m"
+	colorReset  = "\x1b[0m"
+)
+
+// prettyYAMLErrors prints a multiline yaml.Unmarshal error with colorized bullets.
+func prettyYAMLErrors(err error) {
+	fmt.Printf("%s❌ Failed to parse topology YAML. Please fix the following errors:%s\n", colorRed, colorReset)
+	for _, line := range strings.Split(err.Error(), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		fmt.Printf("  %s•%s %s%s%s\n",
+			colorCyan, // bullet color
+			colorReset,
+			colorYellow, // message color
+			line,
+			colorReset,
+		)
+	}
+}
+
+var (
+	gns3Server        string
+	reconcileInterval = 30 * time.Second
+	detach            bool
+)
+
+// RawLink is built directly from your YAML (uses node names).
+type RawLink struct {
+	Nodes []struct {
+		NodeName      string `json:"node_name"`
+		AdapterNumber int    `json:"adapter_number"`
+		PortNumber    int    `json:"port_number"`
+	} `json:"nodes"`
+}
+
+type projectTemplate struct {
+	ID   string `json:"template_id"`
+	Name string `json:"name"`
+}
+
+// ─── Payloads you already use in reconcile.go ─────────────────────────────────
+
+type NodeCreatePayload struct {
+	Name         string                 `json:"name"`
+	TemplateID   string                 `json:"template_id,omitempty"`
+	NodeType     string                 `json:"node_type,omitempty"`
+	ComputeId    string                 `json:"compute_id,omitempty"`
+	Properties   map[string]interface{} `json:"properties,omitempty"`
+	TemplateName string                 `json:"-"`
+	ResourceType string
+}
+type linkEndpoint struct {
+	NodeName      string `json:"node_name,omitempty"`
+	NodeID        string `json:"node_id,omitempty"`
+	AdapterNumber int    `json:"adapter_number"`
+	PortNumber    int    `json:"port_number"`
+}
+
+type LinkCreatePayload struct {
+	Nodes []linkEndpoint `json:"nodes"`
+}
+
+// ─── Observed (GNS3 API) ──────────────────────────────────────────────────────
+
+type ObservedNode struct {
+	ID           string `json:"node_id"`
+	Name         string `json:"name"`
+	Status       string `json:"status"`
+	NodeType     string `json:"node_type"`
+	ResourceType string
+}
+
+type ObservedLink struct {
+	ID    string                 `json:"link_id"`
+	Nodes []ObservedLinkEndpoint `json:"nodes"`
+}
+
+type ObservedLinkEndpoint struct {
+	NodeID        string `json:"node_id"`
+	AdapterNumber int    `json:"adapter_number"`
+	PortNumber    int    `json:"port_number"`
+}
+type TerraformLinkResource struct {
+	ID        string
+	EndpointA string
+	EndpointB string
+}
+
+// ─── Templates (GNS3 API) ─────────────────────────────────────────────────────
+
+type Template struct {
+	TemplateID string `json:"template_id"`
+	Name       string `json:"name"`
+}
+
+type ProjectTemplate struct {
+	TemplateID string `json:"template_id"`
+	Name       string `json:"name"`
+}
+type TerraformResource struct {
+	Type string // e.g. "gns3_qemu_node", "gns3_switch", etc.
+	Name string // e.g. "R1"
+	ID   string // GNS3 node ID
 }

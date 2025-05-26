@@ -1,26 +1,38 @@
 // File: cmd/ConfigureAristaTemplate.go
 package cmd
 
-// ConfigureAristaTemplate is an Ansible playbook template that configures
-// IPv4 interfaces, IPv4 static routes, and OSPFv3 routing (including redistribution)
-// using Arista EOS modules.
+// ConfigureAristaTemplate is an Ansible playbook template for Arista devices.
+// It enables IP routing, brings up physical interfaces as L3, applies IPv4,
+// static routes, OSPFv2 and BGP from your YAML.
 const ConfigureAristaTemplate = `- hosts: {{ .RouterName }}
   gather_facts: no
   connection: network_cli
 
   tasks:
-    - name: Set device hostname
+    - name: Enable global IP routing
       arista.eos.eos_config:
         lines:
-          - hostname {{ .RouterName }}
+          - ip routing
+
+    - name: Configure L3 interfaces
+      arista.eos.eos_interfaces:
+        config:
+{{- range .IPConfigs }}
+{{- if ne (lower .Interface) "loopback1" }}
+          - name: "{{ .Interface }}"
+            enabled: true
+            mode: layer3
+{{- end }}
+{{- end }}
+        state: merged
 
     - name: Configure IPv4 on interfaces
       arista.eos.eos_l3_interfaces:
         config:
 {{- range .IPConfigs }}
-          - name: {{ .Interface }}
+          - name: "{{ .Interface }}"
             ipv4:
-              - address: {{ .IPAddress }}
+              - address: "{{ .IPAddress }}"
 {{- end }}
         state: merged
 
@@ -33,50 +45,45 @@ const ConfigureAristaTemplate = `- hosts: {{ .RouterName }}
             address_families:
               - afi: ipv4
                 routes:
-                  - dest: {{ .DestNetwork }}/{{ maskToPrefix .SubnetMask }}
+                  - dest: "{{ .DestNetwork }}/{{ maskToPrefix .SubnetMask }}"
                     next_hops:
-                      - forward_router_address: {{ .NextHop }}
+                      - forward_router_address: "{{ .NextHop }}"
 {{- if .Interface }}
-                        interface: {{ .Interface }}
+                        interface: "{{ .Interface }}"
 {{- end }}
 {{- end }}
         state: merged
 {{- end }}
 
-{{- if .OSPFv3 }}
-    - name: Configure OSPFv3 routing process
-      arista.eos.eos_ospfv3:
+{{- if .OSPF }}
+    - name: Configure OSPFv2 process
+      arista.eos.eos_ospfv2:
         config:
           processes:
-            - router_id: "{{ .OSPFv3.RouterID }}"
-              vrf: default
-              address_family:
-                - afi: "ipv4"
-                  areas:
-                    - area_id: "{{ .OSPFv3.Area }}"
-                      ranges:
-{{- range .OSPFv3.Networks }}
-                          - address: "{{ cidrSubnetAddress . }}"
-                            subnet_mask: "{{ cidrToMask . }}"
+            - process_id: 1
+              router_id: "{{ .OSPF.RouterID }}"
+              networks:
+{{- range .OSPF.Networks }}
+                - prefix: "{{ . }}"
+                  area:   "{{ $.OSPF.Area }}"
 {{- end }}
-                      {{- if eq (printf "%t" .OSPFv3.Stub) "true" }}
-                      stub: {}
-                      {{- end }}
-                      {{- if eq (printf "%t" .OSPFv3.NSSA) "true" }}
-                      nssa:
-                        default_information_originate: true
-                        no_summary: false
-                      {{- end }}
-                  {{- if .OSPFv3.Redistribute }}
-                  redistribute:
-{{- range .OSPFv3.Redistribute }}
-                    - routes: "{{ .Protocol }}"
-{{- if .RouteMap }}
-                      route_map: "{{ .RouteMap }}"
+        state: merged
+
+    - name: Bind interfaces to OSPFv2
+      arista.eos.eos_ospf_interfaces:
+        config:
+{{- range .OSPF.Interfaces }}
+{{- if ne (lower .Name) "loopback1" }}
+          - name: "{{ .Name }}"
+            address_family:
+              - afi: ipv4
+                area:
+                  area_id: "{{ $.OSPF.Area }}"
+{{- if gt .Cost 0 }}
+                cost: {{ .Cost }}
 {{- end }}
 {{- end }}
-                  {{- end }}
-                - afi: "ipv6"
+{{- end }}
         state: merged
 {{- end }}
 
@@ -106,8 +113,8 @@ const ConfigureAristaTemplate = `- hosts: {{ .RouterName }}
               ospf_route: "{{ .OspfRoute }}"
 {{- end }}
 {{- end }}
-{{- end }}
     - name: Save configuration
       arista.eos.eos_config:
         save_when: changed
+{{- end }}
 `

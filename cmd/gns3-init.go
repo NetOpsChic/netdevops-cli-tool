@@ -12,7 +12,7 @@ var gns3InitCmd = &cobra.Command{
 	Short: "Initialize Terraform for GNS3 inside the terraform/ directory",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Initializing Terraform for GNS3...")
-		runCommandInDir("terraform", []string{"init"}, "terraform/")
+		runCommandInDir("terraform", []string{"init"}, "terraform/", nil)
 	},
 }
 

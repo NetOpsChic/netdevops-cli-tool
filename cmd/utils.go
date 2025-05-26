@@ -4,20 +4,31 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"text/template"
 )
 
-// runCommandInDir runs a command inside a specific directory.
-func runCommandInDir(command string, args []string, dir string) {
-	cmd := exec.Command(command, args...)
-	cmd.Dir = dir // Set the working directory.
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("❌ ERROR running %s in %s: %v\n", command, dir, err)
-		os.Exit(1)
+// funcMap holds custom template functions for Terraform rendering.
+var funcMap = template.FuncMap{
+	"seq":      seq,
+	"multiply": multiply,
+	"mod":      mod,
+	"add":      func(a, b int) int { return a + b },
+}
+
+// Change function signature
+func runCommandInDir(cmdName string, args []string, dir string, logFile *os.File) error {
+	cmd := exec.Command(cmdName, args...)
+	cmd.Dir = dir
+	if logFile != nil {
+		cmd.Stdout = logFile
+		cmd.Stderr = logFile
+	} else {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 	}
+	return cmd.Run()
 }
 
 // multiply returns the product of two integers.
@@ -45,47 +56,26 @@ func seq(start, end int) []int {
 
 // generateTerraformFile creates a Terraform file dynamically based on a template.
 func generateTerraformFile(filename, templateContent string, data interface{}) error {
-	debugFile := "terraform/debug_template.txt"
-	mainFile := "terraform/main.tf"
-
-	// Optional: Keep raw template saved for troubleshooting (no console print)
-	err := os.WriteFile(debugFile, []byte(templateContent), 0644)
-	if err != nil {
-		return fmt.Errorf("could not write debug template: %w", err)
-	}
-
-	// Create or truncate the main Terraform file
-	file, err := os.Create(mainFile)
-	if err != nil {
-		return fmt.Errorf("could not create main Terraform file: %w", err)
-	}
-	defer file.Close()
-
-	// Register custom template functions
-	funcMap := template.FuncMap{
-		"seq":      seq,
-		"multiply": multiply,
-		"mod":      mod,
-		"add":      func(a, b int) int { return a + b },
-	}
-
-	// Parse the template with functions
+	// parse the template with custom functions
 	tmpl, err := template.New("terraform").Funcs(funcMap).Parse(templateContent)
 	if err != nil {
-		return fmt.Errorf("template parsing failed (check debug_template.txt): %w", err)
+		return fmt.Errorf("template parsing failed: %w", err)
 	}
 
-	// Execute template into a buffer
-	var expandedTemplate strings.Builder
-	err = tmpl.Execute(&expandedTemplate, data)
-	if err != nil {
-		return fmt.Errorf("template execution failed (check debug_template.txt): %w", err)
+	// execute the template into a builder
+	var expanded strings.Builder
+	if err := tmpl.Execute(&expanded, data); err != nil {
+		return fmt.Errorf("template execution failed: %w", err)
 	}
 
-	// Write final output to main Terraform file
-	err = os.WriteFile(mainFile, []byte(expandedTemplate.String()), 0644)
-	if err != nil {
-		return fmt.Errorf("could not write final Terraform file: %w", err)
+	// ensure the directory exists
+	if err := os.MkdirAll(path.Dir(filename), 0755); err != nil {
+		return fmt.Errorf("could not create directory for %s: %w", filename, err)
+	}
+
+	// write the rendered template to the target filename
+	if err := os.WriteFile(filename, []byte(expanded.String()), 0644); err != nil {
+		return fmt.Errorf("could not write Terraform file %s: %w", filename, err)
 	}
 
 	return nil

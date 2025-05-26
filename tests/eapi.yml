@@ -1,0 +1,15 @@
+
+- name: Enable eAPI for NetDevOps Observer
+  hosts: all
+  gather_facts: no
+  connection: network_cli
+
+  tasks:
+    - name: Enable Arista eAPI via CLI
+      arista.eos.eos_config:
+        lines:
+          - protocol http
+          - no protocol https
+          - no shutdown
+        parents: management api http-commands
+        match: strict

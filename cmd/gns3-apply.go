@@ -12,7 +12,7 @@ var gns3ApplyCmd = &cobra.Command{
 	Short: "Apply Terraform configuration for GNS3",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Applying Terraform configuration for GNS3...")
-		runCommandInDir("terraform", []string{"apply", "-auto-approve"}, "terraform/")
+		runCommandInDir("terraform", []string{"apply", "-auto-approve"}, "terraform/", nil)
 	},
 }
 

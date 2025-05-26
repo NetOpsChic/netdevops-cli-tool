@@ -1,5 +1,5 @@
-terraform_version: "2.4.0"
-project: "ospf-test"
+terraform_version: "2.5.0"
+project: "netmetric-exporter"
 start_nodes: true
 ztp_server: 192.168.100.3
 
@@ -49,6 +49,24 @@ network-device:
   hostname: "R3"
   vendor: "arista"
   mac_address: "00:1c:73:aa:bc:03"
+  image: "/home/netopschic/Templates/veos-4.29.2F/hda.qcow2"
+  config:
+    - interface: "Ethernet1"
+      ip_address: "10.0.23.2/30"
+      ospf:
+        router_id: "3.3.3.3"
+        area: "0.0.0.0"
+        networks:
+          - "192.168.3.0/24"
+        interfaces:
+          - name: "Ethernet1"
+            cost: 30
+            passive: false
+
+- name: "R4"
+  hostname: "R4"
+  vendor: "arista"
+  mac_address: "00:1c:73:aa:bc:04"
   image: "/home/netopschic/Templates/veos-4.29.2F/hda.qcow2"
   config:
     - interface: "Ethernet1"

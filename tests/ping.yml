@@ -1,0 +1,19 @@
+- hosts: R1
+  gather_facts: no
+  connection: network_cli
+
+  tasks:
+    - name: Ping 40.0.0.2 from R1
+      arista.eos.eos_command:
+        commands:
+          - ping 40.0.0.2
+      register: ping_result
+
+    - name: Show ping output
+      debug:
+        var: ping_result.stdout_lines
+
+    - name: Assert ping to 40.0.0.2 is successful
+      assert:
+        that:
+          - ping_result.stdout[0] is search("0% packet loss")
