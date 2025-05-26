@@ -1,0 +1,573 @@
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding netopschic/gns3 versions matching "2.5.3"...
+- Installing netopschic/gns3 v2.5.3...
+- Installed netopschic/gns3 v2.5.3 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - netopschic/gns3
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mlinux_amd64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[0m[1mdata.gns3_template_id.observe-tower: Reading...[0m[0m
+[0m[1mdata.gns3_template_id.ztp-server: Reading...[0m[0m
+[0m[1mdata.gns3_template_id.observe-tower: Read complete after 0s [id=2ec898c1-9777-4ae0-9f89-8a5728887bf6][0m
+[0m[1mdata.gns3_template_id.ztp-server: Read complete after 0s [id=a4b993cc-6f3c-406e-9ad8-ca24577d83e4][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+ [36m<=[0m read (data resources)[0m
+
+Terraform will perform the following actions:
+
+[1m  # data.gns3_node_id.R1[0m will be read during apply
+  # (config refers to values not yet known)
+[0m [36m<=[0m[0m data "gns3_node_id" "R1" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "R1"
+      [32m+[0m[0m node_id    = (known after apply)
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # data.gns3_node_id.R2[0m will be read during apply
+  # (config refers to values not yet known)
+[0m [36m<=[0m[0m data "gns3_node_id" "R2" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "R2"
+      [32m+[0m[0m node_id    = (known after apply)
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # data.gns3_node_id.R3[0m will be read during apply
+  # (config refers to values not yet known)
+[0m [36m<=[0m[0m data "gns3_node_id" "R3" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "R3"
+      [32m+[0m[0m node_id    = (known after apply)
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # data.gns3_node_id.R4[0m will be read during apply
+  # (config refers to values not yet known)
+[0m [36m<=[0m[0m data "gns3_node_id" "R4" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "R4"
+      [32m+[0m[0m node_id    = (known after apply)
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # data.gns3_node_id.mgmt-cloud[0m will be read during apply
+  # (config refers to values not yet known)
+[0m [36m<=[0m[0m data "gns3_node_id" "mgmt-cloud" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "mgmt-cloud"
+      [32m+[0m[0m node_id    = (known after apply)
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # data.gns3_node_id.mgmt-switch[0m will be read during apply
+  # (config refers to values not yet known)
+[0m [36m<=[0m[0m data "gns3_node_id" "mgmt-switch" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "mgmt-switch"
+      [32m+[0m[0m node_id    = (known after apply)
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # data.gns3_node_id.observe-tower[0m will be read during apply
+  # (config refers to values not yet known)
+[0m [36m<=[0m[0m data "gns3_node_id" "observe-tower" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "observe-tower"
+      [32m+[0m[0m node_id    = (known after apply)
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # data.gns3_node_id.ztp-server[0m will be read during apply
+  # (config refers to values not yet known)
+[0m [36m<=[0m[0m data "gns3_node_id" "ztp-server" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "ztp-server"
+      [32m+[0m[0m node_id    = (known after apply)
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # gns3_cloud.mgmt-cloud[0m will be created
+[0m  [32m+[0m[0m resource "gns3_cloud" "mgmt-cloud" {
+      [32m+[0m[0m cloud_id   = (known after apply)
+      [32m+[0m[0m compute_id = "local"
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "mgmt-cloud"
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # gns3_link.R1_to_R2[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "R1_to_R2" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 2
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 0
+      [32m+[0m[0m node_b_adapter = 2
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 0
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.R2_to_R3[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "R2_to_R3" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 3
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 0
+      [32m+[0m[0m node_b_adapter = 3
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 0
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.R3_to_R4[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "R3_to_R4" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 4
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 0
+      [32m+[0m[0m node_b_adapter = 4
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 0
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.R4_to_R1[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "R4_to_R1" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 5
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 0
+      [32m+[0m[0m node_b_adapter = 5
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 0
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.mgmt-cloud_to_mgmt-switch[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "mgmt-cloud_to_mgmt-switch" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 0
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 1
+      [32m+[0m[0m node_b_adapter = 0
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 3
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.mgmt-switch_to_R1[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "mgmt-switch_to_R1" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 0
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 4
+      [32m+[0m[0m node_b_adapter = 0
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 0
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.mgmt-switch_to_R2[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "mgmt-switch_to_R2" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 0
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 5
+      [32m+[0m[0m node_b_adapter = 0
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 0
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.mgmt-switch_to_R3[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "mgmt-switch_to_R3" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 0
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 6
+      [32m+[0m[0m node_b_adapter = 0
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 0
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.mgmt-switch_to_R4[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "mgmt-switch_to_R4" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 0
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 7
+      [32m+[0m[0m node_b_adapter = 0
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 0
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.mgmt-switch_to_observe-tower[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "mgmt-switch_to_observe-tower" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 0
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 0
+      [32m+[0m[0m node_b_adapter = 0
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 0
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_link.ztp-server_to_mgmt-switch[0m will be created
+[0m  [32m+[0m[0m resource "gns3_link" "ztp-server_to_mgmt-switch" {
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m link_id        = (known after apply)
+      [32m+[0m[0m node_a_adapter = 0
+      [32m+[0m[0m node_a_id      = (known after apply)
+      [32m+[0m[0m node_a_port    = 0
+      [32m+[0m[0m node_b_adapter = 0
+      [32m+[0m[0m node_b_id      = (known after apply)
+      [32m+[0m[0m node_b_port    = 2
+      [32m+[0m[0m project_id     = (known after apply)
+    }
+
+[1m  # gns3_project.project1[0m will be created
+[0m  [32m+[0m[0m resource "gns3_project" "project1" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "demo11"
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # gns3_qemu_node.R1[0m will be created
+[0m  [32m+[0m[0m resource "gns3_qemu_node" "R1" {
+      [32m+[0m[0m adapter_type   = "e1000"
+      [32m+[0m[0m adapters       = 10
+      [32m+[0m[0m console_type   = "telnet"
+      [32m+[0m[0m cpus           = 2
+      [32m+[0m[0m hda_disk_image = "/home/netopschic/Templates/veos-4.29.2F/hda.qcow2"
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m mac_address    = "00:1c:73:aa:bc:01"
+      [32m+[0m[0m name           = "R1"
+      [32m+[0m[0m platform       = "x86_64"
+      [32m+[0m[0m project_id     = (known after apply)
+      [32m+[0m[0m ram            = 2056
+      [32m+[0m[0m start_vm       = true
+    }
+
+[1m  # gns3_qemu_node.R2[0m will be created
+[0m  [32m+[0m[0m resource "gns3_qemu_node" "R2" {
+      [32m+[0m[0m adapter_type   = "e1000"
+      [32m+[0m[0m adapters       = 10
+      [32m+[0m[0m console_type   = "telnet"
+      [32m+[0m[0m cpus           = 2
+      [32m+[0m[0m hda_disk_image = "/home/netopschic/Templates/veos-4.29.2F/hda.qcow2"
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m mac_address    = "00:1c:73:aa:bc:02"
+      [32m+[0m[0m name           = "R2"
+      [32m+[0m[0m platform       = "x86_64"
+      [32m+[0m[0m project_id     = (known after apply)
+      [32m+[0m[0m ram            = 2056
+      [32m+[0m[0m start_vm       = true
+    }
+
+[1m  # gns3_qemu_node.R3[0m will be created
+[0m  [32m+[0m[0m resource "gns3_qemu_node" "R3" {
+      [32m+[0m[0m adapter_type   = "e1000"
+      [32m+[0m[0m adapters       = 10
+      [32m+[0m[0m console_type   = "telnet"
+      [32m+[0m[0m cpus           = 2
+      [32m+[0m[0m hda_disk_image = "/home/netopschic/Templates/veos-4.29.2F/hda.qcow2"
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m mac_address    = "00:1c:73:aa:bc:03"
+      [32m+[0m[0m name           = "R3"
+      [32m+[0m[0m platform       = "x86_64"
+      [32m+[0m[0m project_id     = (known after apply)
+      [32m+[0m[0m ram            = 2056
+      [32m+[0m[0m start_vm       = true
+    }
+
+[1m  # gns3_qemu_node.R4[0m will be created
+[0m  [32m+[0m[0m resource "gns3_qemu_node" "R4" {
+      [32m+[0m[0m adapter_type   = "e1000"
+      [32m+[0m[0m adapters       = 10
+      [32m+[0m[0m console_type   = "telnet"
+      [32m+[0m[0m cpus           = 2
+      [32m+[0m[0m hda_disk_image = "/home/netopschic/Templates/veos-4.29.2F/hda.qcow2"
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m mac_address    = "00:1c:73:aa:bc:04"
+      [32m+[0m[0m name           = "R4"
+      [32m+[0m[0m platform       = "x86_64"
+      [32m+[0m[0m project_id     = (known after apply)
+      [32m+[0m[0m ram            = 2056
+      [32m+[0m[0m start_vm       = true
+    }
+
+[1m  # gns3_start_all.start_nodes[0m will be created
+[0m  [32m+[0m[0m resource "gns3_start_all" "start_nodes" {
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m project_id = (known after apply)
+    }
+
+[1m  # gns3_switch.mgmt-switch[0m will be created
+[0m  [32m+[0m[0m resource "gns3_switch" "mgmt-switch" {
+      [32m+[0m[0m compute_id = "local"
+      [32m+[0m[0m id         = (known after apply)
+      [32m+[0m[0m name       = "mgmt-switch"
+      [32m+[0m[0m project_id = (known after apply)
+      [32m+[0m[0m switch_id  = (known after apply)
+    }
+
+[1m  # gns3_template.observe-tower[0m will be created
+[0m  [32m+[0m[0m resource "gns3_template" "observe-tower" {
+      [32m+[0m[0m compute_id  = "local"
+      [32m+[0m[0m id          = (known after apply)
+      [32m+[0m[0m name        = "observe-tower"
+      [32m+[0m[0m project_id  = (known after apply)
+      [32m+[0m[0m start       = true
+      [32m+[0m[0m template_id = "2ec898c1-9777-4ae0-9f89-8a5728887bf6"
+      [32m+[0m[0m x           = 0
+      [32m+[0m[0m y           = 0
+    }
+
+[1m  # gns3_template.ztp-server[0m will be created
+[0m  [32m+[0m[0m resource "gns3_template" "ztp-server" {
+      [32m+[0m[0m compute_id  = "local"
+      [32m+[0m[0m id          = (known after apply)
+      [32m+[0m[0m name        = "ztp-server"
+      [32m+[0m[0m project_id  = (known after apply)
+      [32m+[0m[0m start       = true
+      [32m+[0m[0m template_id = "a4b993cc-6f3c-406e-9ad8-ca24577d83e4"
+      [32m+[0m[0m x           = 0
+      [32m+[0m[0m y           = 0
+    }
+
+[1mPlan:[0m 21 to add, 0 to change, 0 to destroy.
+[0m[0m[1mgns3_project.project1: Creating...[0m[0m
+[0m[1mgns3_project.project1: Creation complete after 0s [id=83d61b06-0314-42e9-9167-b10f658d5ad7][0m
+[0m[1mgns3_switch.mgmt-switch: Creating...[0m[0m
+[0m[1mgns3_template.ztp-server: Creating...[0m[0m
+[0m[1mgns3_cloud.mgmt-cloud: Creating...[0m[0m
+[0m[1mgns3_qemu_node.R3: Creating...[0m[0m
+[0m[1mgns3_qemu_node.R1: Creating...[0m[0m
+[0m[1mgns3_template.observe-tower: Creating...[0m[0m
+[0m[1mgns3_qemu_node.R2: Creating...[0m[0m
+[0m[1mgns3_qemu_node.R4: Creating...[0m[0m
+[0m[1mgns3_cloud.mgmt-cloud: Creation complete after 0s [id=520b66a7-026e-457c-9385-f5453390e073][0m
+[0m[1mdata.gns3_node_id.mgmt-cloud: Reading...[0m[0m
+[0m[1mgns3_switch.mgmt-switch: Creation complete after 0s [id=f2f620a0-57ba-417d-9f5b-7b064ee8fc33][0m
+[0m[1mdata.gns3_node_id.mgmt-switch: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.mgmt-cloud: Read complete after 0s [id=520b66a7-026e-457c-9385-f5453390e073][0m
+[0m[1mdata.gns3_node_id.mgmt-switch: Read complete after 0s [id=f2f620a0-57ba-417d-9f5b-7b064ee8fc33][0m
+[0m[1mgns3_link.mgmt-cloud_to_mgmt-switch: Creating...[0m[0m
+[0m[1mgns3_link.mgmt-cloud_to_mgmt-switch: Creation complete after 0s [id=97892ae7-0e31-4de0-90a2-6ffd2495e578][0m
+[0m[1mgns3_template.ztp-server: Creation complete after 0s [id=7c57e5f7-255a-4803-922a-27ebbce3b1fd][0m
+[0m[1mdata.gns3_node_id.ztp-server: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.ztp-server: Read complete after 0s [id=7c57e5f7-255a-4803-922a-27ebbce3b1fd][0m
+[0m[1mgns3_link.ztp-server_to_mgmt-switch: Creating...[0m[0m
+[0m[1mgns3_template.observe-tower: Creation complete after 0s [id=e997bcd6-3f03-4c18-8911-30fd6ff3d688][0m
+[0m[1mdata.gns3_node_id.observe-tower: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.observe-tower: Read complete after 0s [id=e997bcd6-3f03-4c18-8911-30fd6ff3d688][0m
+[0m[1mgns3_link.mgmt-switch_to_observe-tower: Creating...[0m[0m
+[0m[1mgns3_link.ztp-server_to_mgmt-switch: Creation complete after 0s [id=32d2c6f1-19ff-4f82-8ace-e7f4a61fd515][0m
+[0m[1mgns3_link.mgmt-switch_to_observe-tower: Creation complete after 1s [id=0ce69f33-410e-4b4c-b6f0-e0f34693e21a][0m
+[0m[1mgns3_qemu_node.R4: Creation complete after 1s [id=61105826-4dcd-435d-825a-a6142958f9a0][0m
+[0m[1mdata.gns3_node_id.R4: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.R4: Read complete after 0s [id=61105826-4dcd-435d-825a-a6142958f9a0][0m
+[0m[1mgns3_link.mgmt-switch_to_R4: Creating...[0m[0m
+[0m[1mgns3_qemu_node.R2: Creation complete after 1s [id=ce5b61e9-916d-456a-bb22-000662999718][0m
+[0m[1mdata.gns3_node_id.R2: Reading...[0m[0m
+[0m[1mgns3_qemu_node.R3: Creation complete after 1s [id=e94b0e32-c189-491a-96b3-e04783cd6d67][0m
+[0m[1mdata.gns3_node_id.R3: Reading...[0m[0m
+[0m[1mgns3_qemu_node.R1: Creation complete after 1s [id=c312f6ab-7f6e-4e11-8eaa-cea206258987][0m
+[0m[1mdata.gns3_node_id.R1: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.R2: Read complete after 0s [id=ce5b61e9-916d-456a-bb22-000662999718][0m
+[0m[1mgns3_link.mgmt-switch_to_R2: Creating...[0m[0m
+[0m[1mdata.gns3_node_id.R3: Read complete after 0s [id=e94b0e32-c189-491a-96b3-e04783cd6d67][0m
+[0m[1mgns3_link.R3_to_R4: Creating...[0m[0m
+[0m[1mgns3_link.mgmt-switch_to_R3: Creating...[0m[0m
+[0m[1mgns3_link.R2_to_R3: Creating...[0m[0m
+[0m[1mdata.gns3_node_id.R1: Read complete after 0s [id=c312f6ab-7f6e-4e11-8eaa-cea206258987][0m
+[0m[1mgns3_link.R4_to_R1: Creating...[0m[0m
+[0m[1mgns3_link.mgmt-switch_to_R1: Creating...[0m[0m
+[0m[1mgns3_link.R1_to_R2: Creating...[0m[0m
+[0m[1mgns3_link.R4_to_R1: Creation complete after 0s [id=03fd9fef-fb3c-4177-8957-6825c973e493][0m
+[0m[1mgns3_link.mgmt-switch_to_R2: Creation complete after 0s [id=6b7c46f0-610d-41ef-984c-540e484da289][0m
+[0m[1mgns3_link.mgmt-switch_to_R4: Creation complete after 0s [id=27eee7bf-4a99-4204-9f11-093f7c1543fe][0m
+[0m[1mgns3_link.mgmt-switch_to_R3: Creation complete after 0s [id=16a32735-a4ee-40aa-a7d2-8793daceb162][0m
+[0m[1mgns3_link.R2_to_R3: Creation complete after 0s [id=caa2c7b3-58dc-488f-9dae-5bfd8ebe54b6][0m
+[0m[1mgns3_link.R3_to_R4: Creation complete after 0s [id=6a3634f7-6abd-49dc-9d19-19252e01136e][0m
+[0m[1mgns3_link.R1_to_R2: Creation complete after 0s [id=33fb36d1-ad76-4811-9196-0467b35c7573][0m
+[0m[1mgns3_link.mgmt-switch_to_R1: Creation complete after 0s [id=ea6e1f4c-b33b-47fe-ac21-682819631893][0m
+[0m[1mgns3_start_all.start_nodes: Creating...[0m[0m
+[0m[1mgns3_start_all.start_nodes: Creation complete after 1s [id=83d61b06-0314-42e9-9167-b10f658d5ad7-start][0m
+[0m[1m[32m
+Apply complete! Resources: 21 added, 0 changed, 0 destroyed.
+[0m[0m[1mdata.gns3_template_id.observe-tower: Reading...[0m[0m
+[0m[1mdata.gns3_template_id.ztp-server: Reading...[0m[0m
+[0m[1mgns3_project.project1: Refreshing state... [id=83d61b06-0314-42e9-9167-b10f658d5ad7][0m
+[0m[1mdata.gns3_template_id.observe-tower: Read complete after 0s [id=2ec898c1-9777-4ae0-9f89-8a5728887bf6][0m
+[0m[1mdata.gns3_template_id.ztp-server: Read complete after 0s [id=a4b993cc-6f3c-406e-9ad8-ca24577d83e4][0m
+[0m[1mgns3_switch.mgmt-switch: Refreshing state... [id=f2f620a0-57ba-417d-9f5b-7b064ee8fc33][0m
+[0m[1mgns3_cloud.mgmt-cloud: Refreshing state... [id=520b66a7-026e-457c-9385-f5453390e073][0m
+[0m[1mgns3_template.ztp-server: Refreshing state... [id=7c57e5f7-255a-4803-922a-27ebbce3b1fd][0m
+[0m[1mgns3_qemu_node.R2: Refreshing state... [id=ce5b61e9-916d-456a-bb22-000662999718][0m
+[0m[1mgns3_template.observe-tower: Refreshing state... [id=e997bcd6-3f03-4c18-8911-30fd6ff3d688][0m
+[0m[1mgns3_qemu_node.R1: Refreshing state... [id=c312f6ab-7f6e-4e11-8eaa-cea206258987][0m
+[0m[1mgns3_qemu_node.R3: Refreshing state... [id=e94b0e32-c189-491a-96b3-e04783cd6d67][0m
+[0m[1mgns3_qemu_node.R4: Refreshing state... [id=61105826-4dcd-435d-825a-a6142958f9a0][0m
+[0m[1mdata.gns3_node_id.mgmt-switch: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.mgmt-cloud: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.ztp-server: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.R2: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.observe-tower: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.R1: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.R3: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.R4: Reading...[0m[0m
+[0m[1mdata.gns3_node_id.mgmt-switch: Read complete after 0s [id=f2f620a0-57ba-417d-9f5b-7b064ee8fc33][0m
+[0m[1mdata.gns3_node_id.mgmt-cloud: Read complete after 0s [id=520b66a7-026e-457c-9385-f5453390e073][0m
+[0m[1mgns3_link.mgmt-cloud_to_mgmt-switch: Refreshing state... [id=97892ae7-0e31-4de0-90a2-6ffd2495e578][0m
+[0m[1mdata.gns3_node_id.ztp-server: Read complete after 0s [id=7c57e5f7-255a-4803-922a-27ebbce3b1fd][0m
+[0m[1mgns3_link.ztp-server_to_mgmt-switch: Refreshing state... [id=32d2c6f1-19ff-4f82-8ace-e7f4a61fd515][0m
+[0m[1mdata.gns3_node_id.R2: Read complete after 0s [id=ce5b61e9-916d-456a-bb22-000662999718][0m
+[0m[1mgns3_link.mgmt-switch_to_R2: Refreshing state... [id=6b7c46f0-610d-41ef-984c-540e484da289][0m
+[0m[1mdata.gns3_node_id.observe-tower: Read complete after 0s [id=e997bcd6-3f03-4c18-8911-30fd6ff3d688][0m
+[0m[1mdata.gns3_node_id.R1: Read complete after 0s [id=c312f6ab-7f6e-4e11-8eaa-cea206258987][0m
+[0m[1mgns3_link.mgmt-switch_to_observe-tower: Refreshing state... [id=0ce69f33-410e-4b4c-b6f0-e0f34693e21a][0m
+[0m[1mgns3_link.mgmt-switch_to_R1: Refreshing state... [id=ea6e1f4c-b33b-47fe-ac21-682819631893][0m
+[0m[1mgns3_link.R1_to_R2: Refreshing state... [id=33fb36d1-ad76-4811-9196-0467b35c7573][0m
+[0m[1mdata.gns3_node_id.R3: Read complete after 0s [id=e94b0e32-c189-491a-96b3-e04783cd6d67][0m
+[0m[1mgns3_link.mgmt-switch_to_R3: Refreshing state... [id=16a32735-a4ee-40aa-a7d2-8793daceb162][0m
+[0m[1mgns3_link.R2_to_R3: Refreshing state... [id=caa2c7b3-58dc-488f-9dae-5bfd8ebe54b6][0m
+[0m[1mdata.gns3_node_id.R4: Read complete after 0s [id=61105826-4dcd-435d-825a-a6142958f9a0][0m
+[0m[1mgns3_link.R3_to_R4: Refreshing state... [id=6a3634f7-6abd-49dc-9d19-19252e01136e][0m
+[0m[1mgns3_link.R4_to_R1: Refreshing state... [id=03fd9fef-fb3c-4177-8957-6825c973e493][0m
+[0m[1mgns3_link.mgmt-switch_to_R4: Refreshing state... [id=27eee7bf-4a99-4204-9f11-093f7c1543fe][0m
+[0m[1mgns3_start_all.start_nodes: Refreshing state... [id=83d61b06-0314-42e9-9167-b10f658d5ad7-start][0m
+
+[0m[1m[32mNo changes.[0m[1m Your infrastructure matches the configuration.[0m
+
+[0mTerraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
+[0m[1m[32m
+Apply complete! Resources: 0 added, 0 changed, 0 destroyed.
+[0m✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+➕ Creating link [{NodeName: NodeID:f2f620a0-57ba-417d-9f5b-7b064ee8fc33 AdapterNumber:0 PortNumber:4} {NodeName: NodeID:c312f6ab-7f6e-4e11-8eaa-cea206258987 AdapterNumber:0 PortNumber:0}]…
+🗑️  Removing stale state for gns3_link.mgmt-switch_to_R1
+📥 Importing gns3_link.mgmt-switch_to_R1 → 83d61b06-0314-42e9-9167-b10f658d5ad7/e16d8231-fbae-4892-b9af-1c25852f2d8d
+✅ Imported gns3_link.mgmt-switch_to_R1
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+➕ Creating node mgmt-switch…
+✅ Raw node "mgmt-switch" created.
+➕ Creating link [{NodeName: NodeID:7c57e5f7-255a-4803-922a-27ebbce3b1fd AdapterNumber:0 PortNumber:0} {NodeName: NodeID:6570410f-2b53-4c5a-9cb7-ce72272d52e9 AdapterNumber:0 PortNumber:2}]…
+➕ Creating link [{NodeName: NodeID:520b66a7-026e-457c-9385-f5453390e073 AdapterNumber:0 PortNumber:1} {NodeName: NodeID:6570410f-2b53-4c5a-9cb7-ce72272d52e9 AdapterNumber:0 PortNumber:3}]…
+➕ Creating link [{NodeName: NodeID:6570410f-2b53-4c5a-9cb7-ce72272d52e9 AdapterNumber:0 PortNumber:4} {NodeName: NodeID:c312f6ab-7f6e-4e11-8eaa-cea206258987 AdapterNumber:0 PortNumber:0}]…
+➕ Creating link [{NodeName: NodeID:6570410f-2b53-4c5a-9cb7-ce72272d52e9 AdapterNumber:0 PortNumber:5} {NodeName: NodeID:ce5b61e9-916d-456a-bb22-000662999718 AdapterNumber:0 PortNumber:0}]…
+➕ Creating link [{NodeName: NodeID:6570410f-2b53-4c5a-9cb7-ce72272d52e9 AdapterNumber:0 PortNumber:6} {NodeName: NodeID:e94b0e32-c189-491a-96b3-e04783cd6d67 AdapterNumber:0 PortNumber:0}]…
+➕ Creating link [{NodeName: NodeID:6570410f-2b53-4c5a-9cb7-ce72272d52e9 AdapterNumber:0 PortNumber:7} {NodeName: NodeID:61105826-4dcd-435d-825a-a6142958f9a0 AdapterNumber:0 PortNumber:0}]…
+➕ Creating link [{NodeName: NodeID:6570410f-2b53-4c5a-9cb7-ce72272d52e9 AdapterNumber:0 PortNumber:0} {NodeName: NodeID:e997bcd6-3f03-4c18-8911-30fd6ff3d688 AdapterNumber:0 PortNumber:0}]…
+🗑️  Removing stale state for gns3_switch.mgmt-switch
+🗑️  Removing stale state for data.gns3_node_id.mgmt-switch
+📥 Importing gns3_switch.mgmt-switch → 83d61b06-0314-42e9-9167-b10f658d5ad7/6570410f-2b53-4c5a-9cb7-ce72272d52e9
+✅ Imported gns3_switch.mgmt-switch
+🗑️  Removing stale state for gns3_link.ztp-server_to_mgmt-switch
+📥 Importing gns3_link.ztp-server_to_mgmt-switch → 83d61b06-0314-42e9-9167-b10f658d5ad7/1232235a-f873-4635-9223-1477896a373b
+✅ Imported gns3_link.ztp-server_to_mgmt-switch
+🗑️  Removing stale state for gns3_link.mgmt-cloud_to_mgmt-switch
+📥 Importing gns3_link.mgmt-cloud_to_mgmt-switch → 83d61b06-0314-42e9-9167-b10f658d5ad7/cfb6479a-2f65-4616-9d13-24885afdef69
+✅ Imported gns3_link.mgmt-cloud_to_mgmt-switch
+🗑️  Removing stale state for gns3_link.mgmt-switch_to_R1
+📥 Importing gns3_link.mgmt-switch_to_R1 → 83d61b06-0314-42e9-9167-b10f658d5ad7/63b44104-13d1-4778-9d9d-3a563b98f266
+✅ Imported gns3_link.mgmt-switch_to_R1
+🗑️  Removing stale state for gns3_link.mgmt-switch_to_R2
+📥 Importing gns3_link.mgmt-switch_to_R2 → 83d61b06-0314-42e9-9167-b10f658d5ad7/019b828b-fe91-4ba0-91d4-69b9f71807be
+✅ Imported gns3_link.mgmt-switch_to_R2
+🗑️  Removing stale state for gns3_link.mgmt-switch_to_R3
+📥 Importing gns3_link.mgmt-switch_to_R3 → 83d61b06-0314-42e9-9167-b10f658d5ad7/0943579f-94a8-40b7-aa2b-edd62ba23f9f
+✅ Imported gns3_link.mgmt-switch_to_R3
+🗑️  Removing stale state for gns3_link.mgmt-switch_to_R4
+📥 Importing gns3_link.mgmt-switch_to_R4 → 83d61b06-0314-42e9-9167-b10f658d5ad7/4aabe56e-9b60-4753-8371-e9799cfc743c
+✅ Imported gns3_link.mgmt-switch_to_R4
+🗑️  Removing stale state for gns3_link.mgmt-switch_to_observe-tower
+📥 Importing gns3_link.mgmt-switch_to_observe-tower → 83d61b06-0314-42e9-9167-b10f658d5ad7/ff2e8f4d-6cb2-4729-b5f5-8629c45b3df5
+✅ Imported gns3_link.mgmt-switch_to_observe-tower
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…
+✅ Reconcile pass complete
+⏱️  Periodic reconcile…

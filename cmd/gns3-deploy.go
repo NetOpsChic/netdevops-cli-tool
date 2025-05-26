@@ -72,7 +72,7 @@ func runGNS3Deploy(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Open log file (for subprocess logs)
+	// Open log file for Terraform subprocesses
 	logFile := filepath.Join(logDir, topo.Project.Name+".log")
 	logF, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
@@ -83,13 +83,6 @@ func runGNS3Deploy(cmd *cobra.Command, args []string) error {
 	// 5) Visualize
 	fmt.Println("📡 Visualizing YAML topology...")
 	visualizeTopology(topo)
-
-	// --- Detach if requested ---
-	if detach {
-		fmt.Println("🔁 Detaching to background... logs will go to:")
-		fmt.Printf("    %s\n", logFile)
-		return forkAndDetach(topo.Project.Name, configFile)
-	}
 
 	// 6) Generate Terraform
 	fmt.Println("⚙️ Generating Terraform configuration from YAML...")
@@ -158,41 +151,32 @@ func runGNS3Deploy(cmd *cobra.Command, args []string) error {
 
 	// 12) Start reconcile daemon
 	fmt.Println("🔁 Starting reconciliation daemon…")
-	// Detach *after* here, if -d was passed
-	// (Not applicable now, but if you want, move detach here!)
-	startReconcileDaemon(configFile, projectID)
+	if detach {
+		fmt.Printf("🔁 Detaching reconciliation daemon to background, logs at:\n    %s\n", logFile)
+		return forkReconcileDaemon(configFile, projectID, logFile)
+	} else {
+		StartReconcileDaemon(configFile, projectID)
+	}
 
 	return nil
 }
 
-// Detach after main prints, not at the start.
-func forkAndDetach(projectName, configFile string) error {
-	logDir := filepath.Join("projects", projectName, "logs")
-	os.MkdirAll(logDir, 0755)
-	logFile := filepath.Join(logDir, projectName+".log")
+func forkReconcileDaemon(configFile, projectID, logFile string) error {
 	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("cannot open log file %s: %w", logFile, err)
 	}
 	devNull, _ := os.OpenFile(os.DevNull, os.O_RDWR, 0)
 
-	// Remove -d/--detach from args
-	orig := os.Args
-	childArgs := []string{orig[0]}
-	for _, a := range orig[1:] {
-		if a == "-d" || a == "--detach" {
-			continue
-		}
-		childArgs = append(childArgs, a)
-	}
+	// 🔥 NOTE: Use __reconcile_daemon as the first argument!
+	exe := os.Args[0]
+	args := []string{exe, "__reconcile_daemon", "--config", configFile, "--project-id", projectID}
 	attrs := &syscall.ProcAttr{
 		Files: []uintptr{devNull.Fd(), f.Fd(), f.Fd()},
 		Env:   os.Environ(),
 	}
-	if _, err := syscall.ForkExec(orig[0], childArgs, attrs); err != nil {
-		return fmt.Errorf("fork failed: %w", err)
-	}
-	return nil
+	_, err = syscall.ForkExec(exe, args, attrs)
+	return err
 }
 
 func lookupProjectID(serverURL, desiredName string) (string, error) {
@@ -415,8 +399,6 @@ func writeInventoryFromZTPMap(raw map[string]interface{}, osType, ansDir string)
 	return nil
 }
 func visualizeTopology(t Topology) {
-	fmt.Println("\n📡 **Topology Visualization**")
-	fmt.Println("==================================")
 	fmt.Println("🖥️ Routers:")
 	for _, r := range t.NetworkDevice.Routers {
 		fmt.Printf("🔹 [ %s ]\n", r.Name)

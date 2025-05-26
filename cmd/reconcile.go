@@ -21,7 +21,7 @@ import (
 )
 
 // startReconcileDaemon watches the YAML, then runs an initial + on-change + periodic reconcile pass.
-func startReconcileDaemon(yamlPath, projectID string) {
+func StartReconcileDaemon(yamlPath, projectID string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "❌ watcher error: %v\n", err)
@@ -71,7 +71,10 @@ func runReconcile(yamlPath, projectID string) {
 		fmt.Fprintf(os.Stderr, "❌ failed to load topology: %v\n", err)
 		return
 	}
-
+	gns3Server = topo.Project.GNS3Server
+	if gns3Server == "" {
+		gns3Server = "http://localhost:3080" // or your actual default
+	}
 	// 2) Build desired nodes and links
 	desiredNodes, desiredLinksByName := BuildDesired(topo)
 
