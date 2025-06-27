@@ -4,35 +4,58 @@ const terraformTemplate = `terraform {
   required_providers {
     gns3 = {
       source  = "netopschic/gns3"
-      version = "{{ .Project.TerraformVersion }}"
+      version = "{{ .Topology.Project.TerraformVersion }}"
     }
   }
 }
 
 provider "gns3" {
-  host = "http://localhost:3080"
+  host = "{{ .Topology.Project.GNS3Server }}"
 }
 
 resource "gns3_project" "project1" {
-  name = "{{ .Project.Name }}"
+  name = "{{ .Topology.Project.Name }}"
 }
 
-# Templates (e.g., ZTP, Observer)
-{{- range .Templates.Servers }}
-data "gns3_template_id" "{{ .Name }}" {
-  name = "{{ .Name }}"
+# --- Unique GNS3 Template Lookups (for routers & servers) ---
+{{- range $templateName, $_ := .UniqueTemplateNames }}
+data "gns3_template_id" "{{ $templateName }}" {
+  name = "{{ $templateName }}"
 }
+{{- end }}
 
+# --- Template Routers ---
+{{- range .TemplateRouters }}
+resource "gns3_template" "{{ .Name }}" {
+  name        = "{{ .Name }}"
+  project_id  = gns3_project.project1.id
+  template_id = data.gns3_template_id.{{ .TemplateName }}.template_id
+  start       = {{ if .Start }}{{ .Start }}{{ else }}true{{ end }}
+}
+data "gns3_node_id" "{{ .Name }}" {
+  project_id = gns3_project.project1.id
+  name       = "{{ .Name }}"
+  depends_on = [gns3_template.{{ .Name }}]
+}
+{{- end }}
+
+# --- Template Servers ---
+{{- range .TemplateServers }}
 resource "gns3_template" "{{ .Name }}" {
   name        = "{{ .Name }}"
   project_id  = gns3_project.project1.id
   template_id = data.gns3_template_id.{{ .Name }}.template_id
-  start       = {{ .Start }}
+  start       = {{ if .Start }}{{ .Start }}{{ else }}true{{ end }}
+}
+data "gns3_node_id" "{{ .Name }}" {
+  project_id = gns3_project.project1.id
+  name       = "{{ .Name }}"
+  depends_on = [gns3_template.{{ .Name }}]
 }
 {{- end }}
 
-# Network Devices (Routers)
-{{ range .NetworkDevice.Routers }}
+# --- QEMU Routers (Network Device) ---
+{{- range .Topology.NetworkDevice.Routers }}
 resource "gns3_qemu_node" "{{ .Name }}" {
   project_id     = gns3_project.project1.id
   name           = "{{ .Name }}"
@@ -45,59 +68,41 @@ resource "gns3_qemu_node" "{{ .Name }}" {
   platform       = "x86_64"
   start_vm       = true
 }
-{{ end }}
-
-# Switches
-{{ range .Switches }}
-resource "gns3_switch" "{{ .Name }}" {
-  name       = "{{ .Name }}"
-  project_id = gns3_project.project1.id
-}
-{{ end }}
-
-# Clouds
-{{ range .Clouds }}
-resource "gns3_cloud" "{{ .Name }}" {
-  name       = "{{ .Name }}"
-  project_id = gns3_project.project1.id
-}
-{{ end }}
-
-# Node ID Lookups
-{{ range .NetworkDevice.Routers }}
 data "gns3_node_id" "{{ .Name }}" {
   project_id = gns3_project.project1.id
   name       = "{{ .Name }}"
   depends_on = [gns3_qemu_node.{{ .Name }}]
 }
-{{ end }}
+{{- end }}
 
-{{ range .Switches }}
+# --- Switches ---
+{{- range .Topology.Switches }}
+resource "gns3_switch" "{{ .Name }}" {
+  name       = "{{ .Name }}"
+  project_id = gns3_project.project1.id
+}
 data "gns3_node_id" "{{ .Name }}" {
   project_id = gns3_project.project1.id
   name       = "{{ .Name }}"
   depends_on = [gns3_switch.{{ .Name }}]
 }
-{{ end }}
+{{- end }}
 
-{{ range .Templates.Servers }}
-data "gns3_node_id" "{{ .Name }}" {
-  project_id = gns3_project.project1.id
+# --- Clouds ---
+{{- range .Topology.Clouds }}
+resource "gns3_cloud" "{{ .Name }}" {
   name       = "{{ .Name }}"
-  depends_on = [gns3_template.{{ .Name }}]
+  project_id = gns3_project.project1.id
 }
-{{ end }}
-
-{{ range .Clouds }}
 data "gns3_node_id" "{{ .Name }}" {
   project_id = gns3_project.project1.id
   name       = "{{ .Name }}"
   depends_on = [gns3_cloud.{{ .Name }}]
 }
-{{ end }}
+{{- end }}
 
-# Links
-{{ range .Links }}
+# --- Links ---
+{{- range .Topology.Links }}
 resource "gns3_link" "{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1).Name }}" {
   lifecycle {
     create_before_destroy = true
@@ -110,21 +115,23 @@ resource "gns3_link" "{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1)
   node_b_adapter = {{ (index .Endpoints 1).Adapter }}
   node_b_port    = {{ (index .Endpoints 1).Port }}
 }
-{{ end }}
+{{- end }}
 
-{{ if .Project.StartNodes }}
+{{ if .Topology.Project.StartNodes }}
 resource "gns3_start_all" "start_nodes" {
   project_id = gns3_project.project1.id
   depends_on = [
-    {{- range .NetworkDevice.Routers }}gns3_qemu_node.{{ .Name }},
+    {{- range .Topology.NetworkDevice.Routers }}gns3_qemu_node.{{ .Name }},
     {{- end }}
-    {{- range .Switches }}gns3_switch.{{ .Name }},
+    {{- range .TemplateRouters }}gns3_template.{{ .Name }},
     {{- end }}
-    {{- range .Clouds }}gns3_cloud.{{ .Name }},
+    {{- range .TemplateServers }}gns3_template.{{ .Name }},
     {{- end }}
-    {{- range .Templates.Servers }}gns3_template.{{ .Name }},
+    {{- range .Topology.Switches }}gns3_switch.{{ .Name }},
     {{- end }}
-    {{- range .Links }}gns3_link.{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1).Name }},
+    {{- range .Topology.Clouds }}gns3_cloud.{{ .Name }},
+    {{- end }}
+    {{- range .Topology.Links }}gns3_link.{{ (index .Endpoints 0).Name }}_to_{{ (index .Endpoints 1).Name }},
     {{- end }}
   ]
 }

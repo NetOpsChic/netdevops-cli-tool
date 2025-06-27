@@ -46,11 +46,11 @@ func runGNS3Deploy(cmd *cobra.Command, args []string) error {
 	}
 
 	// 2) Validate
-	if err := validateTopology(&topo); err != nil {
-		fmt.Println("❌ Validation failed:")
-		fmt.Println(err)
-		return err
-	}
+	// if err := validateTopology(&topo); err != nil {
+	// 	fmt.Println("❌ Validation failed:")
+	// 	fmt.Println(err)
+	// 	return err
+	// }
 
 	// 3) GNS3 server must be set
 	if topo.Project.GNS3Server == "" {
@@ -87,7 +87,20 @@ func runGNS3Deploy(cmd *cobra.Command, args []string) error {
 	// 6) Generate Terraform
 	fmt.Println("⚙️ Generating Terraform configuration from YAML...")
 	tfMain := filepath.Join(tfDir, "main.tf")
-	if err := generateTerraformFile(tfMain, terraformTemplate, topo); err != nil {
+	ctx := struct {
+		Topology            *Topology
+		QemuRouters         []NetworkDevice
+		TemplateRouters     []Router
+		TemplateServers     []TemplateServer
+		UniqueTemplateNames map[string]bool
+	}{
+		Topology:            &topo,
+		QemuRouters:         topo.NetworkDevice.Routers,
+		TemplateRouters:     topo.Templates.Routers,
+		TemplateServers:     topo.Templates.Servers,
+		UniqueTemplateNames: UniqueTemplateNames(topo.Templates),
+	}
+	if err := generateTerraformFile(tfMain, terraformTemplate, ctx); err != nil {
 		return fmt.Errorf("error generating Terraform file: %w", err)
 	}
 

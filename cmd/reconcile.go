@@ -582,26 +582,47 @@ func fetchLinksFromGNS3(projectID string) ([]ObservedLink, error) {
 	return out, nil
 }
 func BuildDesired(t Topology) (nodes []NodeCreatePayload, links []LinkCreatePayload) {
-	// Routers → QEMU nodes
-	for _, r := range t.NetworkDevice.Routers {
+	// Track router names already handled as template
+	routerNames := make(map[string]bool)
+
+	// Template Routers (modern mode)
+	for _, r := range t.Templates.Routers {
 		nodes = append(nodes, NodeCreatePayload{
-			Name:         r.Name,
-			TemplateName: "qemu",
-			ResourceType: "gns3_qemu_node",
-			Properties: map[string]interface{}{
-				"name":           r.Name,
-				"adapter_type":   "e1000",
-				"hda_disk_image": r.Image,
-				"node_type":      "qemu",
-				"compute_id":     "local",
-				"mac_address":    r.MacAddress,
-				"adapters":       10,
-				"ram":            2048,
-				"cpus":           2,
-				"start_vm":       true,
-				"platform":       "x86_64",
-				"console_type":   "telnet",
-			},
+			Name:         r.Name,          // node name, e.g. "R1"
+			TemplateName: r.TemplateName,  // template name, e.g. "arista-eos"
+			ResourceType: "gns3_template", // will trigger template node creation
+		})
+		routerNames[r.Name] = true
+	}
+
+	// QEMU Routers (legacy/classic mode)—only if not handled as template!
+	for _, r := range t.NetworkDevice.Routers {
+		if !routerNames[r.Name] {
+			nodes = append(nodes, NodeCreatePayload{
+				Name:         r.Name,
+				TemplateName: "qemu",
+				ResourceType: "gns3_qemu_node",
+				Properties: map[string]interface{}{
+					"name":           r.Name,
+					"adapter_type":   "e1000",
+					"hda_disk_image": r.Image,
+					"mac_address":    r.MacAddress,
+					"adapters":       10,
+					"ram":            2048,
+					"cpus":           2,
+					"platform":       "x86_64",
+					"console_type":   "telnet",
+				},
+			})
+		}
+	}
+
+	// Template servers (observer, ztp-server, etc)
+	for _, srv := range t.Templates.Servers {
+		nodes = append(nodes, NodeCreatePayload{
+			Name:         srv.Name,
+			TemplateName: srv.Name,
+			ResourceType: "gns3_template",
 		})
 	}
 
@@ -625,16 +646,7 @@ func BuildDesired(t Topology) (nodes []NodeCreatePayload, links []LinkCreatePayl
 		})
 	}
 
-	// Template-based servers
-	for _, srv := range t.Templates.Servers {
-		nodes = append(nodes, NodeCreatePayload{
-			Name:         srv.Name,
-			TemplateName: srv.Name,
-			ResourceType: "gns3_template",
-		})
-	}
-
-	// Links
+	// Links (no change)
 	for _, l := range t.Links {
 		if len(l.Endpoints) != 2 {
 			fmt.Fprintf(os.Stderr, "❌ Skipping link with %d endpoints: %+v\n", len(l.Endpoints), l)

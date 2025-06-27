@@ -55,20 +55,31 @@ type NetworkDevice struct {
 
 type TemplateGroup struct {
 	Servers []TemplateServer `yaml:"servers"`
+	Routers []Router         `yaml:"routers"`
 }
 
 type TemplateServer struct {
-	Name      string `yaml:"name"`
-	Start     bool   `yaml:"start"`
-	ZTPServer string `yaml:"ztp_server,omitempty"` // Only applicable to ztp-server
+	Name         string `yaml:"name"`
+	TemplateName string `yaml:"template_name"`
+	Start        bool   `yaml:"start"`
+	ZTPServer    string `yaml:"ztp_server,omitempty"` // Only applicable to ztp-server
+}
+type TemplateData struct {
+	Templates struct {
+		Servers []TemplateServer
+		Routers []Router
+	}
+	UniqueRouterTemplates map[string]bool // e.g. {"arista-eos":true}
 }
 
 // Router defines a router device.
 type Router struct {
-	Name     string     `yaml:"name"`
-	Vendor   string     `yaml:"vendor"` // Added to support YAML input (e.g., "arista")
-	Template string     `yaml:"template"`
-	Config   ConfigList `yaml:"config"`
+	Name         string     `yaml:"name"`
+	Vendor       string     `yaml:"vendor"` // Added to support YAML input (e.g., "arista")
+	Template     string     `yaml:"template"`
+	Config       ConfigList `yaml:"config"`
+	Start        bool       `yaml:"start"`
+	TemplateName string     `yaml:"template_name"`
 }
 
 // Switch defines a switch device.
@@ -321,4 +332,28 @@ type TerraformResource struct {
 	Type string // e.g. "gns3_qemu_node", "gns3_switch", etc.
 	Name string // e.g. "R1"
 	ID   string // GNS3 node ID
+}
+
+func UniqueTemplateNames(tg TemplateGroup) map[string]bool {
+	unique := make(map[string]bool)
+	for _, r := range tg.Routers {
+		if r.TemplateName != "" {
+			unique[r.TemplateName] = true
+		}
+	}
+	for _, s := range tg.Servers {
+		if s.Name != "" {
+			unique[s.Name] = true
+		}
+		if s.TemplateName != "" {
+			unique[s.TemplateName] = true
+		}
+	}
+	return unique
+}
+
+type TemplateContext struct {
+	Topology            *Topology
+	Templates           TemplateGroup
+	UniqueTemplateNames map[string]bool
 }

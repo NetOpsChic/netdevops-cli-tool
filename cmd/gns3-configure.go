@@ -66,17 +66,17 @@ var gns3ConfigureCmd = &cobra.Command{
 			return fmt.Errorf("failed to read deployment file: %v", err)
 		}
 
-		// === VALIDATION ===
-		var fullTopo Topology
-		if err := yaml.Unmarshal(data, &fullTopo); err != nil {
-			prettyYAMLErrors(err)
-			return fmt.Errorf("cannot continue due to invalid YAML")
-		}
-		if err := validateTopology(&fullTopo); err != nil {
-			fmt.Println("❌ Topology validation failed:")
-			fmt.Println(err)
-			return fmt.Errorf("cannot continue due to invalid topology")
-		}
+		// // === VALIDATION ===
+		// var fullTopo Topology
+		// if err := yaml.Unmarshal(data, &fullTopo); err != nil {
+		// 	prettyYAMLErrors(err)
+		// 	return fmt.Errorf("cannot continue due to invalid YAML")
+		// }
+		// if err := validateTopology(&fullTopo); err != nil {
+		// 	fmt.Println("❌ Topology validation failed:")
+		// 	fmt.Println(err)
+		// 	return fmt.Errorf("cannot continue due to invalid topology")
+		// }
 		// === END VALIDATION ===
 
 		// Existing logic: unmarshal just routers

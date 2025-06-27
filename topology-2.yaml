@@ -1,0 +1,143 @@
+project:
+  name: "demo-01"
+  start_nodes: true
+  terraform_version: "2.5.3"
+  gns3_server: "http://localhost:3080"
+
+templates:
+  routers:
+    - name: "R1"
+      hostname: "R1"
+      template_name: "arista-eos"
+      config:
+        - interface: "Ethernet2"
+          ip_address: "20.0.0.1/8"
+        - interface: "Ethernet5"
+          ip_address: "10.0.0.1/8"
+        - interface: "loopback1"
+          ip_address: "1.1.1.1/32"
+        - ospf:
+            router_id: "1.1.1.1"
+            area: "0.0.0.0"
+            networks:
+              - "1.1.1.1/32"
+              - "10.0.0.0/8"
+              - "20.0.0.0/8"
+            interfaces:
+              - name: "Ethernet2"
+                cost: 10
+                passive: false
+              - name: "Ethernet5"
+                cost: 10
+                passive: false
+              - name: "loopback1"
+                passive: true
+
+    - name: "R2"
+      hostname: "R2"
+      template_name: "arista-eos"
+      config:
+        - interface: "Ethernet2"
+          ip_address: "20.0.0.2/8"
+        - interface: "Ethernet3"
+          ip_address: "30.0.0.1/8"
+        - ospf:
+            router_id: "2.2.2.2"
+            area: "0.0.0.0"
+            networks:
+              - "20.0.0.0/8"
+              - "30.0.0.0/8"
+            interfaces:
+              - name: "Ethernet2"
+                cost: 10
+                passive: false
+              - name: "Ethernet3"
+                cost: 20
+                passive: false
+
+    - name: "R3"
+      hostname: "R3"
+      template_name: "arista-eos"
+      config:
+        - interface: "Ethernet3"
+          ip_address: "30.0.0.2/8"
+        - interface: "Ethernet4"
+          ip_address: "40.0.0.1/8"
+        - interface: "loopback1"
+          ip_address: "2.2.2.2/32"
+        - ospf:
+            router_id: "2.2.2.2"
+            area: "0.0.0.0"
+            networks:
+              - "2.2.2.2/32"
+              - "30.0.0.0/8"
+              - "40.0.0.0/8"
+            interfaces:
+              - name: "Ethernet3"
+                cost: 10
+                passive: false
+              - name: "Ethernet4"
+                cost: 10
+                passive: false
+              - name: "loopback1"
+                passive: true
+
+    - name: "R4"
+      hostname: "R4"
+      template_name: "arista-eos"
+      config:
+        - interface: "Ethernet4"
+          ip_address: "40.0.0.2/8"
+        - interface: "Ethernet5"
+          ip_address: "10.0.0.2/8"
+        - interface: "loopback1"
+          ip_address: "3.3.3.3/32"
+        - ospf:
+            router_id: "3.3.3.3"
+            area: "0.0.0.0"
+            networks:
+              - "3.3.3.3/32"
+              - "10.0.0.0/8"
+              - "40.0.0.0/8"
+            interfaces:
+              - name: "Ethernet4"
+                cost: 10
+                passive: false
+              - name: "Ethernet5"
+                cost: 10
+                passive: false
+              - name: "loopback1"
+                passive: true
+
+links:
+  - endpoints:
+      - name: "R1"
+        adapter: 2
+        port: 0
+      - name: "R2"
+        adapter: 2
+        port: 0
+
+  - endpoints:
+      - name: "R2"
+        adapter: 3
+        port: 0
+      - name: "R3"
+        adapter: 3
+        port: 0
+
+  - endpoints:
+      - name: "R3"
+        adapter: 4
+        port: 0
+      - name: "R4"
+        adapter: 4
+        port: 0
+
+  - endpoints:
+      - name: "R4"
+        adapter: 5
+        port: 0
+      - name: "R1"
+        adapter: 5
+        port: 0
